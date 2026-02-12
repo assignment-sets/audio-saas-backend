@@ -1,0 +1,32 @@
+{
+  // List of templates to apply (keeping default as is always recommended)
+  // Add more templates in the list 
+  // existing templates can be seen here `https://github.com/assignment-sets/annotator-cli` 
+  "templates": ["default", "prisma"],
+  
+  // Behavior settings
+  "settings": {
+    "max_recursive_depth": 10,      // How deep to recurse into folders
+    "max_num_of_files": 1000,       // Maximum files to process
+    "max_file_size_kb": 512         // Skip files larger than this
+  },
+  
+  // Override comment styles for specific extensions
+  // Example: ".kt": "//", ".scala": "//"
+  "comment_styles": {},
+  
+  // Additional file extensions to exclude (beyond defaults)
+  // Example: [".txt", ".log"]
+  // keeping existing items is prefered 
+  "exclude_extensions": [".log", ".cache"],
+  
+  // Additional directories to exclude (supports nested paths)
+  // Example: ["temp", "cache", "src/generated/proto"]
+  // keeping existing items is prefered
+  "exclude_dirs": ["node_modules", ".venv", "__pycache__", "dist", "build", "target", "bin", ".git"],
+  
+  // Additional specific file `names` to exclude [no support for nested paths]
+  // Example: [".env.local", "config.json"]
+  // keeping existing items is prefered
+  "exclude_files": [".env", ".annotator.jsonc", ".gitignore"]
+}

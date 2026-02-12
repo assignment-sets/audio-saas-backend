@@ -34,6 +34,10 @@ exports.onExecutePostLogin = async (event, api) => {
       `${namespace}/nickname`,
       event.user.nickname || "",
     );
+    api.accessToken.setCustomClaim(
+      `${namespace}/displayName`,
+      event.user.name || "",
+    );
   }
 
   // User sync with backend

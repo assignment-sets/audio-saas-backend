@@ -1,9 +1,12 @@
+// src/index.ts ~annotator~
 import express from "express";
 import type { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import userRouter from "./routes/user.routes";
 import { env } from "./config/env";
 import { logger } from "./config/logger";
+import { errorHandler } from "./middleware/errorHandler";
+import { initUserWorker } from "./queues/workers/user.worker";
 
 const app = express();
 const PORT = env.PORT || 5000;
@@ -45,7 +48,12 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   res.status(500).json({ error: "Internal server error" });
 });
 
+app.use(errorHandler);
+
 app.listen(PORT, () => {
   logger.info(`🚀 AudioSaaS Backend running on http://localhost:${PORT}`);
   logger.info(`Sync Endpoint: http://localhost:${PORT}/api/user/sync/internal`);
 });
+
+initUserWorker();
+logger.info("👷 Background Worker listening for jobs...");

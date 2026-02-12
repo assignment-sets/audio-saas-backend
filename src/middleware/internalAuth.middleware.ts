@@ -1,3 +1,4 @@
+// src/middleware/internalAuth.middleware.ts ~annotator~
 import type { Request, Response, NextFunction } from "express";
 import { env } from "../config/env";
 import { logger } from "../config/logger";

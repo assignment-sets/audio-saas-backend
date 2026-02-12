@@ -20,6 +20,9 @@ model User {
   displayName        String           @map("display_name")
   stripeCustomerId   String?          @unique @map("stripe_customer_id")
   createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  // --- New Fields for Soft Delete & Lifecycle ---
+  isBlocked         Boolean          @default(false) @map("is_blocked")
+  deletedAt         DateTime?        @map("deleted_at") @db.Timestamptz(6)
 
   // Relations
   artistProfile      ArtistProfile?

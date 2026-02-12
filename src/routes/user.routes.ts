@@ -1,55 +1,104 @@
+// src/routes/user.routes.ts ~annotator~
 import { Router } from "express";
+import type { Request, Response } from "express";
 import { internalSyncAuth } from "../middleware/internalAuth.middleware";
+import { jwtCheck } from "../middleware/auth0.middleware";
 import * as userService from "../service/user.service";
-import { syncUserSchema } from "../schemas/user.schema";
-import { logger } from "../config/logger";
-import { z } from "zod";
+import {
+  syncUserSchema,
+  updateUserSchema,
+  getUserSchema,
+} from "../schemas/user.schema";
+import { catchAsync } from "../middleware/asyncWrapper";
+import {
+  NotFoundError,
+  UnauthorizedError,
+  ValidationError,
+} from "../lib/errors";
 
 const router = Router();
 
-router.post("/sync/internal", internalSyncAuth, async (req, res) => {
-  const { id, email } = req.body;
-
-  logger.info({ id, email }, "Received user sync request from Auth0");
-
-  try {
-    const { id, email, displayName } = req.body;
-
-    const validatedData = syncUserSchema.parse({
-      id,
-      email,
-      displayName: displayName || email?.split("@")[0],
+/**
+ * Internal Sync Route
+ */
+router.post(
+  "/sync/internal",
+  internalSyncAuth,
+  catchAsync(async (req: Request, res: Response) => {
+    const result = syncUserSchema.safeParse({
+      ...req.body,
+      displayName: req.body.displayName || req.body.email?.split("@")[0],
     });
 
-    const user = await userService.syncUser(validatedData);
-
-    logger.info({ userId: user.id }, "User sync completed successfully");
-    res.status(201).json(user);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      logger.error(
-        {
-          issues: error.issues,
-          received: req.body,
-        },
-        "User sync validation failed",
-      );
-
-      return res.status(400).json({
-        error: "Validation failed",
-        details: error.issues,
-      });
+    if (!result.success) {
+      throw new ValidationError("Validation failed", result.error.issues);
     }
 
-    logger.error(
-      { err: error, body: req.body },
-      "Unexpected error during internal user sync",
-    );
+    const user = await userService.syncUser(result.data);
+    return res.status(201).json(user);
+  }),
+);
 
-    res.status(400).json({
-      error: "Sync failed",
-    });
-  }
-});
+/**
+ * GET Current User
+ */
+router.get(
+  "/",
+  jwtCheck,
+  catchAsync(async (req: Request, res: Response) => {
+    const auth0Id = req.auth?.payload.sub;
+
+    const result = getUserSchema.safeParse({ id: auth0Id });
+    if (!result.success) {
+      throw new ValidationError("Invalid User ID", result.error.issues);
+    }
+
+    const user = await userService.getUserById(result.data);
+    if (!user) {
+      throw new NotFoundError("User not found");
+    }
+
+    return res.json(user);
+  }),
+);
+
+/**
+ * PATCH User Details
+ */
+router.patch(
+  "/",
+  jwtCheck,
+  catchAsync(async (req: Request, res: Response) => {
+    const auth0Id = req.auth?.payload.sub;
+    if (!auth0Id) throw new UnauthorizedError();
+
+    const result = updateUserSchema.safeParse(req.body);
+    if (!result.success) {
+      throw new ValidationError("Invalid update data", result.error.issues);
+    }
+
+    if (Object.keys(result.data).length === 0) {
+      throw new ValidationError("Update data required");
+    }
+
+    const updatedUser = await userService.updateUser(auth0Id, result.data);
+    return res.json(updatedUser);
+  }),
+);
+
+/**
+ * DELETE User
+ */
+router.delete(
+  "/",
+  jwtCheck,
+  catchAsync(async (req: Request, res: Response) => {
+    const auth0Id = req.auth?.payload.sub;
+    if (!auth0Id) throw new UnauthorizedError();
+
+    await userService.deleteUser(auth0Id);
+    return res.status(204).send();
+  }),
+);
 
 export default router;

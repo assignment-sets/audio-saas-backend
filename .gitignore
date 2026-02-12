@@ -44,3 +44,7 @@ Thumbs.db
 # Diagnostic tools
 .npm
 .eslintcache
+
+# Special scrap files
+TODO.md
+buffer.md

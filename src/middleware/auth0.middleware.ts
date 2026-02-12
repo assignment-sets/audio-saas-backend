@@ -1,3 +1,4 @@
+// src/middleware/auth0.middleware.ts ~annotator~
 import { auth } from "express-oauth2-jwt-bearer";
 import { env } from "../config/env";
 

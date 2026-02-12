@@ -1,3 +1,4 @@
+// src/config/env.ts ~annotator~
 import { envSchema } from "../schemas/env.schema";
 import "dotenv/config";
 

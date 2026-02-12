@@ -1,3 +1,4 @@
+// src/lib/fga.client.ts ~annotator~
 import { CredentialsMethod, OpenFgaClient } from "@openfga/sdk";
 import { env } from "../config/env";
 
