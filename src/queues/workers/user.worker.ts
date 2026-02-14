@@ -5,8 +5,8 @@ import type { UserCleanupPayload } from "../types";
 import { prisma } from "../../lib/prisma";
 import { management } from "../../lib/auth0.client";
 import { fgaClient } from "../../lib/fga.client";
-import { env } from "../../config/env";
-import { logger } from "../../config/logger";
+import { env } from "../../config/env_setup/env";
+import { logger } from "../../config/logging_setup/logger";
 
 const connection = {
   host: env.REDIS_HOST,

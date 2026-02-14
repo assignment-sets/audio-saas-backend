@@ -2,10 +2,10 @@
 import express from "express";
 import type { Request, Response, NextFunction } from "express";
 import cors from "cors";
-import userRouter from "./routes/user.routes";
-import { env } from "./config/env";
-import { logger } from "./config/logger";
-import { errorHandler } from "./middleware/errorHandler";
+import userRouter from "./modules/users/user.routes";
+import { env } from "./config/env_setup/env";
+import { logger } from "./config/logging_setup/logger";
+import { errorHandler } from "./middleware/errorHandling/errorHandler";
 import { initUserWorker } from "./queues/workers/user.worker";
 
 const app = express();

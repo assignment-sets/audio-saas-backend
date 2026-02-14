@@ -1,6 +1,6 @@
-// src/config/logger.ts ~annotator~
+// src/config/logging_setup/logger.ts ~annotator~
 import pino from "pino";
-import { env } from "./env";
+import { env } from "../env_setup/env";
 
 const isProd = env.NODE_ENV === "production";
 

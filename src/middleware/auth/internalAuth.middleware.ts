@@ -1,7 +1,7 @@
-// src/middleware/internalAuth.middleware.ts ~annotator~
+// src/middleware/auth/internalAuth.middleware.ts ~annotator~
 import type { Request, Response, NextFunction } from "express";
-import { env } from "../config/env";
-import { logger } from "../config/logger";
+import { env } from "../../config/env_setup/env";
+import { logger } from "../../config/logging_setup/logger";
 
 export const internalSyncAuth = (
   req: Request,

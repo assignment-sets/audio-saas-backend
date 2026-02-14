@@ -1,4 +1,4 @@
-// src/schemas/env.schema.ts ~annotator~
+// src/config/env_setup/env.schema.ts ~annotator~
 import { z } from "zod";
 
 export const envSchema = z.object({

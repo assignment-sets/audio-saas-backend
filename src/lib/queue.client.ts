@@ -1,6 +1,6 @@
 // src/lib/queue.client.ts ~annotator~
 import { Queue } from "bullmq";
-import { env } from "../config/env";
+import { env } from "../config/env_setup/env";
 import { JobName } from "../queues/types";
 import type { JobDataMap } from "../queues/types";
 

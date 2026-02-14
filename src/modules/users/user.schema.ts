@@ -1,4 +1,4 @@
-// src/schemas/user.schema.ts ~annotator~
+// src/modules/users/user.schema.ts ~annotator~
 import { z } from "zod";
 
 export const syncUserSchema = z.object({

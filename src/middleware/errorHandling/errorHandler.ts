@@ -1,8 +1,8 @@
-// src/middleware/errorHandler.ts ~annotator~
+// src/middleware/errorHandling/errorHandler.ts ~annotator~
 import type { Request, Response, NextFunction } from "express";
-import { AppError } from "../lib/errors";
-import { logger } from "../config/logger";
-import { env } from "../config/env";
+import { AppError } from "../../lib/errors";
+import { logger } from "../../config/logging_setup/logger";
+import { env } from "../../config/env_setup/env";
 
 export const errorHandler = (
   err: Error | AppError,

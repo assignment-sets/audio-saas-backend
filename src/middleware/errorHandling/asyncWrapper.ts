@@ -1,4 +1,4 @@
-// src/middleware/asyncWrapper.ts ~annotator~
+// src/middleware/errorHandling/asyncWrapper.ts ~annotator~
 import type { Request, Response, NextFunction } from "express";
 
 export const catchAsync = (fn: Function) => {

@@ -1,5 +1,5 @@
 // src/lib/prisma.ts ~annotator~
-import { env } from "../config/env";
+import { env } from "../config/env_setup/env";
 import pg from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";

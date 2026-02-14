@@ -2,7 +2,7 @@
 // src/lib/auth0.client.ts
 
 import { ManagementClient } from "auth0";
-import { env } from "../config/env";
+import { env } from "../config/env_setup/env";
 
 export const management = new ManagementClient({
   domain: env.AUTH0_DOMAIN,
