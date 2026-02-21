@@ -1,14 +1,14 @@
 // src/middleware/auth/internalAuth.middleware.ts ~annotator~
-import type { Request, Response, NextFunction } from "express";
-import { env } from "../../config/env_setup/env";
-import { logger } from "../../config/logging_setup/logger";
+import type { Request, Response, NextFunction } from 'express';
+import { env } from '../../config/env_setup/env';
+import { logger } from '../../config/logging_setup/logger';
 
 export const internalSyncAuth = (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
-  const syncSecret = req.header("x-sync-secret");
+  const syncSecret = req.header('x-sync-secret');
 
   if (!syncSecret || syncSecret !== env.AUTH0_INTERNAL_SYNC_SECRET) {
     logger.warn(
@@ -18,15 +18,15 @@ export const internalSyncAuth = (
         url: req.originalUrl,
         hasSecret: !!syncSecret,
       },
-      "Unauthorized internal sync attempt blocked",
+      'Unauthorized internal sync attempt blocked',
     );
 
-    return res.status(401).json({ error: "Unauthorized" });
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
   logger.debug(
     { url: req.originalUrl },
-    "Internal sync authentication successful",
+    'Internal sync authentication successful',
   );
 
   next();

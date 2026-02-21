@@ -1,7 +1,7 @@
-import type { Request, Response, NextFunction } from "express";
-import { prisma } from "../../lib/prisma";
-import { ForbiddenError, NotFoundError } from "../../lib/errors";
-import { logger } from "../../config/logging_setup/logger";
+import type { Request, Response, NextFunction } from 'express';
+import { prisma } from '../../lib/prisma';
+import { ForbiddenError, NotFoundError } from '../../lib/errors';
+import { logger } from '../../config/logging_setup/logger';
 
 export const hydrateUser = async (
   req: Request,
@@ -20,16 +20,16 @@ export const hydrateUser = async (
     });
 
     if (!user) {
-      throw new NotFoundError("User record not found in database.");
+      throw new NotFoundError('User record not found in database.');
     }
 
     // THE KILL SWITCH
     if (user.isBlocked || user.deletedAt) {
       logger.warn(
         { userId: auth0Id },
-        "Blocked or deleted user attempted access",
+        'Blocked or deleted user attempted access',
       );
-      throw new ForbiddenError("Your account has been deactivated.");
+      throw new ForbiddenError('Your account has been deactivated.');
     }
 
     // Attach the actual Prisma user object to the request

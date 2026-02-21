@@ -1,6 +1,6 @@
-import type { Request, Response } from "express";
-import * as userService from "./user.service";
-import type { User } from "@prisma/client";
+import type { Request, Response } from 'express';
+import * as userService from './user.service';
+import type { User } from '@prisma/client';
 
 /**
  * Synchronize user from Auth0 post-registration hook
@@ -9,7 +9,7 @@ import type { User } from "@prisma/client";
 export const syncUser = async (req: Request, res: Response) => {
   const data = {
     ...req.body,
-    displayName: req.body.displayName || req.body.email.split("@")[0],
+    displayName: req.body.displayName || req.body.email.split('@')[0],
   };
 
   const user = await userService.syncUser(data);

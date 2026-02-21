@@ -23,8 +23,8 @@ SYNC_URL="https://subturriculated-unpublicly-shari.ngrok-free.dev/api/user/sync/
 
 ```javascript
 exports.onExecutePostLogin = async (event, api) => {
-  const axios = require("axios");
-  const namespace = "https://api.<api-identifier-url>.com"; // Auth0 API identifier
+  const axios = require('axios');
+  const namespace = 'https://api.<api-identifier-url>.com'; // Auth0 API identifier
 
   // ATTACH CUSTOM CLAIMS
   // This makes these fields visible in req.auth.payload on your backend
@@ -32,11 +32,11 @@ exports.onExecutePostLogin = async (event, api) => {
     api.accessToken.setCustomClaim(`${namespace}/email`, event.user.email);
     api.accessToken.setCustomClaim(
       `${namespace}/nickname`,
-      event.user.nickname || "",
+      event.user.nickname || '',
     );
     api.accessToken.setCustomClaim(
       `${namespace}/displayName`,
-      event.user.name || "",
+      event.user.name || '',
     );
   }
 
@@ -45,23 +45,23 @@ exports.onExecutePostLogin = async (event, api) => {
     const payload = {
       id: event.user.user_id,
       email: event.user.email,
-      displayName: event.user.name || event.user.nickname || "",
+      displayName: event.user.name || event.user.nickname || '',
     };
 
     try {
       await axios.post(event.secrets.SYNC_URL, payload, {
         headers: {
-          "x-sync-secret": event.secrets.INTERNAL_SYNC_SECRET,
-          "ngrok-skip-browser-warning": "true",
+          'x-sync-secret': event.secrets.INTERNAL_SYNC_SECRET,
+          'ngrok-skip-browser-warning': 'true',
         },
         timeout: 5000,
       });
 
-      api.user.setAppMetadata("is_synced", true);
+      api.user.setAppMetadata('is_synced', true);
     } catch (err) {
-      console.error("Sync failed, blocking login:", err.message);
+      console.error('Sync failed, blocking login:', err.message);
       // If the DB is not reachable, no token provided
-      api.access.deny("Initialization failed. Please try again in a moment.");
+      api.access.deny('Initialization failed. Please try again in a moment.');
     }
   }
 };

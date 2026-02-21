@@ -1,6 +1,6 @@
 // src/lib/fga.client.ts ~annotator~
-import { CredentialsMethod, OpenFgaClient } from "@openfga/sdk";
-import { env } from "../config/env_setup/env";
+import { CredentialsMethod, OpenFgaClient } from '@openfga/sdk';
+import { env } from '../config/env_setup/env';
 
 export const fgaClient = new OpenFgaClient({
   apiUrl: env.FGA_API_URL,

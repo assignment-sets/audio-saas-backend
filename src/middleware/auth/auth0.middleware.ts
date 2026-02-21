@@ -1,6 +1,6 @@
 // src/middleware/auth/auth0.middleware.ts ~annotator~
-import { auth } from "express-oauth2-jwt-bearer";
-import { env } from "../../config/env_setup/env";
+import { auth } from 'express-oauth2-jwt-bearer';
+import { env } from '../../config/env_setup/env';
 
 export const jwtCheck = auth({
   audience: env.AUTH0_AUDIENCE,

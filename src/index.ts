@@ -1,12 +1,12 @@
 // src/index.ts ~annotator~
-import express from "express";
-import type { Request, Response, NextFunction } from "express";
-import cors from "cors";
-import userRouter from "./modules/users/user.routes";
-import { env } from "./config/env_setup/env";
-import { logger } from "./config/logging_setup/logger";
-import { errorHandler } from "./middleware/errorHandling/errorHandler";
-import { initUserWorker } from "./queues/workers/user.worker";
+import express from 'express';
+import type { Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import userRouter from './modules/users/user.routes';
+import { env } from './config/env_setup/env';
+import { logger } from './config/logging_setup/logger';
+import { errorHandler } from './middleware/errorHandling/errorHandler';
+import { initUserWorker } from './queues/workers/user.worker';
 
 const app = express();
 const PORT = env.PORT || 5000;
@@ -19,17 +19,17 @@ app.use(express.json());
 app.use((req: Request, res: Response, next: NextFunction) => {
   logger.info(
     { method: req.method, url: req.url, ip: req.ip },
-    "Incoming Request",
+    'Incoming Request',
   );
   next();
 });
 
 // Routes
-app.use("/api/user", userRouter);
+app.use('/api/user', userRouter);
 
 // Health check
-app.get("/health", (req: Request, res: Response) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
+app.get('/health', (req: Request, res: Response) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Global Error Handler
@@ -42,10 +42,10 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
       },
       url: req.url,
     },
-    "Unhandled server error",
+    'Unhandled server error',
   );
 
-  res.status(500).json({ error: "Internal server error" });
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 app.use(errorHandler);
@@ -56,4 +56,4 @@ app.listen(PORT, () => {
 });
 
 initUserWorker();
-logger.info("👷 Background Worker listening for jobs...");
+logger.info('👷 Background Worker listening for jobs...');

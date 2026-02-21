@@ -1,6 +1,6 @@
 // src/queues/types.ts ~annotator~
 export enum JobName {
-  USER_CLEANUP = "user-cleanup",
+  USER_CLEANUP = 'user-cleanup',
   // more can be added later: SEND_WELCOME_EMAIL = "send-welcome-email"
 }
 

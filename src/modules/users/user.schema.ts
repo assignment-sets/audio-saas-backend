@@ -1,5 +1,5 @@
 // src/modules/users/user.schema.ts ~annotator~
-import { z } from "zod";
+import { z } from 'zod';
 
 export const syncUserSchema = z.object({
   id: z.string().min(1),

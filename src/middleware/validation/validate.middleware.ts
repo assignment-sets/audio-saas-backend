@@ -1,6 +1,6 @@
-import type { Request, Response, NextFunction } from "express";
-import { ZodObject } from "zod";
-import { ValidationError } from "../../lib/errors";
+import type { Request, Response, NextFunction } from 'express';
+import { ZodObject } from 'zod';
+import { ValidationError } from '../../lib/errors';
 
 /**
  * Higher-order middleware to validate request body against a Zod schema.
@@ -14,7 +14,7 @@ export const validate = (schema: ZodObject) => {
       if (!result.success) {
         // Pass to your global error handler with the Zod issues
         return next(
-          new ValidationError("Validation failed", result.error.issues),
+          new ValidationError('Validation failed', result.error.issues),
         );
       }
 

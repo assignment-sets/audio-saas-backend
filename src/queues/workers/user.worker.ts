@@ -1,12 +1,12 @@
 // src/queues/workers/user.worker.ts ~annotator~
-import { Worker, Job } from "bullmq";
-import { JobName } from "../types";
-import type { UserCleanupPayload } from "../types";
-import { prisma } from "../../lib/prisma";
-import { management } from "../../lib/auth0.client";
-import { fgaClient } from "../../lib/fga.client";
-import { env } from "../../config/env_setup/env";
-import { logger } from "../../config/logging_setup/logger";
+import { Worker, Job } from 'bullmq';
+import { JobName } from '../types';
+import type { UserCleanupPayload } from '../types';
+import { prisma } from '../../lib/prisma';
+import { management } from '../../lib/auth0.client';
+import { fgaClient } from '../../lib/fga.client';
+import { env } from '../../config/env_setup/env';
+import { logger } from '../../config/logging_setup/logger';
 
 const connection = {
   host: env.REDIS_HOST,
@@ -18,14 +18,14 @@ const connection = {
  */
 export const initUserWorker = () => {
   const worker = new Worker<UserCleanupPayload>(
-    "main-app-queue", // Must match the name in queue.client.ts
+    'main-app-queue', // Must match the name in queue.client.ts
     async (job: Job<UserCleanupPayload>) => {
       const { userId } = job.data;
 
       if (job.name === JobName.USER_CLEANUP) {
         logger.info(
           { userId, jobId: job.id },
-          "Worker: Starting cleanup process",
+          'Worker: Starting cleanup process',
         );
 
         // 1. OpenFGA Cleanup
@@ -41,44 +41,44 @@ export const initUserWorker = () => {
                 object: t.key.object,
               })),
             });
-            logger.info({ userId }, "Worker: OpenFGA tuples purged");
+            logger.info({ userId }, 'Worker: OpenFGA tuples purged');
           } else {
-            logger.info({ userId }, "Worker: No OpenFGA tuples found to purge");
+            logger.info({ userId }, 'Worker: No OpenFGA tuples found to purge');
           }
         } catch (error: unknown) {
           const message =
             error instanceof Error ? error.message : String(error);
           logger.error(
             { err: message, userId },
-            "Worker: OpenFGA cleanup failed (Non-blocking)",
+            'Worker: OpenFGA cleanup failed (Non-blocking)',
           );
         }
 
         // 2. Auth0 Permanent Deletion
         try {
           await management.users.delete(userId);
-          logger.info({ userId }, "Worker: Auth0 record deleted");
+          logger.info({ userId }, 'Worker: Auth0 record deleted');
         } catch (error: unknown) {
           // Defensive check for Auth0 error structure
-          if (error !== null && typeof error === "object") {
+          if (error !== null && typeof error === 'object') {
             const err = error as Record<string, unknown>;
             const statusCode = err.statusCode || err.status;
 
             if (statusCode === 404) {
               logger.info(
                 { userId },
-                "Worker: Auth0 record already gone (404), skipping...",
+                'Worker: Auth0 record already gone (404), skipping...',
               );
             } else {
               logger.error(
-                { err: err.message || "Unknown Auth0 error", userId },
-                "Worker: Auth0 deletion failed - Retrying...",
+                { err: err.message || 'Unknown Auth0 error', userId },
+                'Worker: Auth0 deletion failed - Retrying...',
               );
               throw error;
             }
           } else {
             // Fallback for weird error types
-            logger.error({ userId }, "Worker: Critical Auth0 error occurred");
+            logger.error({ userId }, 'Worker: Critical Auth0 error occurred');
             throw error;
           }
         }
@@ -93,12 +93,12 @@ export const initUserWorker = () => {
           if (result.count > 0) {
             logger.info(
               { userId },
-              "Worker: Database record and relations purged",
+              'Worker: Database record and relations purged',
             );
           } else {
             logger.info(
               { userId },
-              "Worker: Database record already purged, skipping...",
+              'Worker: Database record already purged, skipping...',
             );
           }
         } catch (error: unknown) {
@@ -106,7 +106,7 @@ export const initUserWorker = () => {
             error instanceof Error ? error.message : String(error);
           logger.error(
             { err: message, userId },
-            "Worker: DB hard delete failed - Retrying...",
+            'Worker: DB hard delete failed - Retrying...',
           );
           throw error;
         }
@@ -118,14 +118,14 @@ export const initUserWorker = () => {
     },
   );
 
-  worker.on("completed", (job) => {
-    logger.info({ jobId: job.id }, "Worker: Job completed successfully");
+  worker.on('completed', (job) => {
+    logger.info({ jobId: job.id }, 'Worker: Job completed successfully');
   });
 
-  worker.on("failed", (job, err) => {
+  worker.on('failed', (job, err) => {
     logger.error(
       { jobId: job?.id, err: err.message, userId: job?.data.userId },
-      "Worker: Job failed permanently",
+      'Worker: Job failed permanently',
     );
   });
 

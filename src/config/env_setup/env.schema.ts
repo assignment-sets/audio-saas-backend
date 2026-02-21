@@ -1,10 +1,10 @@
 // src/config/env_setup/env.schema.ts ~annotator~
-import { z } from "zod";
+import { z } from 'zod';
 
 export const envSchema = z.object({
-  NODE_ENV: z.enum(["production", "test", "development"]),
+  NODE_ENV: z.enum(['production', 'test', 'development']),
   PORT: z.coerce.number().int().positive(),
-  
+
   // DB postgres
   DATABASE_URL: z.url(),
 
