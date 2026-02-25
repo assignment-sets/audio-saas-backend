@@ -3,6 +3,7 @@ import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import userRouter from './modules/users/user.routes';
+import artistRouter from './modules/artist/artist.routes';
 import { env } from './config/env_setup/env';
 import { logger } from './config/logging_setup/logger';
 import { errorHandler } from './middleware/errorHandling/errorHandler';
@@ -26,6 +27,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 // Routes
 app.use('/api/user', userRouter);
+app.use('/api/artist', artistRouter);
 
 // Health check
 app.get('/health', (req: Request, res: Response) => {

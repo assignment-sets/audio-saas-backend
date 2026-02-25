@@ -39,7 +39,7 @@ model User {
 model ArtistProfile {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId     String   @unique @map("user_id")
-  artistName String   @map("artist_name")
+  artistName String   @unique @map("artist_name")
   bio        String?
   verified   Boolean  @default(false)
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
