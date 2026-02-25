@@ -22,7 +22,7 @@ router.use(catchAsync(hydrateUser));
 // Private: View by UUID (Internal/App use)
 router.get(
   '/id/:id',
-  validate(getArtistByIdSchema),
+  validate(getArtistByIdSchema, 'params'),
   catchAsync(artistController.getProfileById),
 );
 
