@@ -100,15 +100,26 @@ export const getProfileByName = async (
     where: { artistName },
     include: {
       user: {
-        select: {
-          isBlocked: true,
-          deletedAt: true,
+        select: { isBlocked: true }, // deletedAt is handled by the Prisma extension
+      },
+      albums: {
+        orderBy: { releaseDate: 'desc' },
+        take: 5,
         },
+      tracks: {
+        where: {
+          state: 'ready', // Track uses state instead of deletedAt
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
       },
       _count: {
         select: {
           followers: true,
-          tracks: true,
+          tracks: {
+            where: { state: 'ready' }, // Only count ready tracks
+          },
+          albums: true,
         },
       },
     },
@@ -150,7 +161,9 @@ export const getProfileById = async (
       _count: {
         select: {
           followers: true,
-          tracks: true,
+          tracks: {
+            where: { state: 'ready' }, // Ensure managers see the correct track count
+          },
         },
       },
     },
