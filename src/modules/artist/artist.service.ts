@@ -13,6 +13,35 @@ import { JobName } from '../../queues/types';
 import { OutboxStatus, Prisma } from '@prisma/client';
 import { OutboxIntentTypes } from '../../config/constants/constants';
 
+// Centralized Prisma error handler to reduce boilerplate
+const handlePrismaError = (
+  error: unknown,
+  actionMsg: string,
+  logMeta: object,
+) => {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === 'P2002') {
+      const target = error.meta?.target as string[] | undefined;
+      if (target?.includes('user_id')) {
+        throw new BadRequestError(
+          'Artist profile already exists for this user',
+        );
+      }
+      if (target?.includes('artist_name')) {
+        throw new BadRequestError('Artist name is already taken');
+      }
+      throw new BadRequestError('A unique constraint failed');
+    }
+    if (error.code === 'P2025') {
+      throw new NotFoundError('Artist profile not found');
+    }
+  }
+
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  logger.error({ err: errorMessage, ...logMeta }, `Failed to ${actionMsg}`);
+  throw new BadRequestError(`Could not ${actionMsg} at this time`);
+};
+
 export const createProfile = async (
   userId: string,
   data: CreateArtistInput,
@@ -147,12 +176,17 @@ export const updateProfile = async (
       'You do not have permission to update this profile',
     );
     }
+
+  try {
     return await prisma.artistProfile.update({
-      where: { userId },
+      where: { id: profileId },
       data,
     });
-  } catch (error) {
-    logger.error({ err: error, userId }, 'Failed to update artist profile');
-    throw new NotFoundError('Artist profile not found or update failed');
+  } catch (error: unknown) {
+    handlePrismaError(error, 'update artist profile', {
+      requesterId,
+      profileId,
+    });
+    throw error;
   }
 };
