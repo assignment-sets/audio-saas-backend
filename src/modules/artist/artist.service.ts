@@ -72,6 +72,25 @@ export const getProfileByName = async (
 export const getProfileById = async (
   id: string,
   requesterId: string,
+): Promise<ArtistProfile> => {
+  // Execute network calls concurrently to slash latency
+  const [managerCheck, moderatorCheck] = await Promise.all([
+    fgaClient.check({
+      user: `user:${requesterId}`,
+      relation: 'can_manage',
+      object: `artist_profile:${id}`,
+    }),
+    fgaClient.check({
+      user: `user:${requesterId}`,
+      relation: 'can_moderate',
+      object: `artist_profile:${id}`,
+    }),
+  ]);
+
+  if (!managerCheck.allowed && !moderatorCheck.allowed) {
+    throw new ForbiddenError('Inadequate permissions to access this profile');
+  }
+
   const profile = await prisma.artistProfile.findUnique({
     where: { id },
     include: {
@@ -93,13 +112,16 @@ export const updateProfile = async (
   profileId: string,
   data: UpdateArtistInput,
 ): Promise<ArtistProfile> => {
-  try {
-    const nameTaken = await prisma.artistProfile.findUnique({
-      where: { artistName: data.artistName },
+  const { allowed } = await fgaClient.check({
+    user: `user:${requesterId}`,
+    relation: 'can_manage',
+    object: `artist_profile:${profileId}`,
     });
 
-    if (nameTaken) {
-      throw new BadRequestError('Artist name is already taken');
+  if (!allowed) {
+    throw new ForbiddenError(
+      'You do not have permission to update this profile',
+    );
     }
     return await prisma.artistProfile.update({
       where: { userId },
