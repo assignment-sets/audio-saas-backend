@@ -49,12 +49,12 @@ export const createProfile = async (
   try {
     const { profile, outboxTask } = await prisma.$transaction(async (tx) => {
       const newProfile = await tx.artistProfile.create({
-      data: {
-        userId,
-        artistName: data.artistName,
-        bio: data.bio,
-      },
-    });
+        data: {
+          userId,
+          artistName: data.artistName,
+          bio: data.bio,
+        },
+      });
 
       // Use Prisma.InputJsonObject to enforce strict type safety without `any`
       const payload: Prisma.InputJsonObject = {
@@ -105,7 +105,7 @@ export const getProfileByName = async (
       albums: {
         orderBy: { releaseDate: 'desc' },
         take: 5,
-        },
+      },
       tracks: {
         where: {
           state: 'ready', // Track uses state instead of deletedAt
@@ -125,8 +125,8 @@ export const getProfileByName = async (
     },
   });
 
-  // Check if profile exists AND if the underlying user is active
-  if (!profile || profile.user.isBlocked || profile.user.deletedAt) {
+  // If the user is soft-deleted, the extension makes profile return null automatically
+  if (!profile || profile.user?.isBlocked) {
     throw new NotFoundError('Artist not found');
   }
 
@@ -137,7 +137,6 @@ export const getProfileById = async (
   id: string,
   requesterId: string,
 ): Promise<ArtistProfile> => {
-  // Execute network calls concurrently to slash latency
   const [managerCheck, moderatorCheck] = await Promise.all([
     fgaClient.check({
       user: `user:${requesterId}`,
@@ -182,13 +181,13 @@ export const updateProfile = async (
     user: `user:${requesterId}`,
     relation: 'can_manage',
     object: `artist_profile:${profileId}`,
-    });
+  });
 
   if (!allowed) {
     throw new ForbiddenError(
       'You do not have permission to update this profile',
     );
-    }
+  }
 
   try {
     return await prisma.artistProfile.update({
