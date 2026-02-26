@@ -3,6 +3,7 @@ import { Queue } from 'bullmq';
 import { env } from '../config/env_setup/env';
 import { JobName } from '../queues/types';
 import type { JobDataMap } from '../queues/types';
+import { QueueNames } from '../config/constants/constants';
 
 // Redis connection options
 const connection = {
@@ -12,7 +13,7 @@ const connection = {
 
 // Create the main background queue
 // We use JobDataMap[JobName] to ensure type safety when adding jobs
-export const mainQueue = new Queue('main-app-queue', {
+export const mainQueue = new Queue(QueueNames.MAIN, {
   connection,
   defaultJobOptions: {
     attempts: 3, // Retry 3 times if it fails
