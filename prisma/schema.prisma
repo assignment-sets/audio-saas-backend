@@ -190,3 +190,31 @@ model Payment {
 
   @@map("payments")
 }
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  FAILED_AND_ROLLED_BACK
+}
+
+model Outbox {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  
+  // The "Intent" (e.g., "FGA_CREATE_ARTIST_PROFILE", "STRIPE_CUSTOMER_SYNC")
+  type         String       
+  
+  // Flexible data storage for any worker's needs
+  payload      Json         
+  
+  status       OutboxStatus @default(PENDING)
+  attempts     Int          @default(0)
+  lastError    String?      @map("last_error")
+  
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([status, type]) // Fast lookups for workers
+  @@map("outbox")
+}
