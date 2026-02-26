@@ -7,35 +7,37 @@ import * as artistController from './artist.controller';
 import {
   createArtistSchema,
   updateArtistSchema,
-  getArtistByIdSchema,
+  artistIdParamSchema,
 } from './artist.schema';
 
 const router = Router();
 
-// Public: View by artistName (e.g., /api/artists/skrillex)
+// Public: View by artistName
 router.get('/:artistName', catchAsync(artistController.getProfileByName));
 
 // Protected Routes
 router.use(jwtCheck);
 router.use(catchAsync(hydrateUser));
 
-// Private: View by UUID (Internal/App use)
+// Private/Admin/Manager: View by UUID
 router.get(
   '/id/:id',
-  validate(getArtistByIdSchema, 'params'),
+  validate(artistIdParamSchema, 'params'),
   catchAsync(artistController.getProfileById),
 );
 
 router.post(
   '/',
-  validate(createArtistSchema),
+  validate(createArtistSchema, 'body'),
   catchAsync(artistController.createMyProfile),
 );
 
+// Update: Requires both the ID in params and data in body
 router.patch(
-  '/',
-  validate(updateArtistSchema),
-  catchAsync(artistController.updateMyProfile),
+  '/:id',
+  validate(artistIdParamSchema, 'params'),
+  validate(updateArtistSchema, 'body'),
+  catchAsync(artistController.updateProfile),
 );
 
 export default router;

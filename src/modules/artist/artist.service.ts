@@ -69,7 +69,9 @@ export const getProfileByName = async (
   return profile;
 };
 
-export const getProfileById = async (id: string): Promise<ArtistProfile> => {
+export const getProfileById = async (
+  id: string,
+  requesterId: string,
   const profile = await prisma.artistProfile.findUnique({
     where: { id },
     include: {
@@ -87,7 +89,8 @@ export const getProfileById = async (id: string): Promise<ArtistProfile> => {
 };
 
 export const updateProfile = async (
-  userId: string,
+  requesterId: string,
+  profileId: string,
   data: UpdateArtistInput,
 ): Promise<ArtistProfile> => {
   try {

@@ -15,13 +15,19 @@ export const getProfileByName = async (req: Request, res: Response) => {
 };
 
 export const getProfileById = async (req: Request, res: Response) => {
+  const user = req.user as User;
   const { id } = req.params;
-  const profile = await artistService.getProfileById(id as string);
+  const profile = await artistService.getProfileById(id as string, user.id);
   return res.json(profile);
 };
 
-export const updateMyProfile = async (req: Request, res: Response) => {
+export const updateProfile = async (req: Request, res: Response) => {
   const user = req.user as User;
-  const profile = await artistService.updateProfile(user.id, req.body);
+  const { id } = req.params; // Expecting /artist/:id
+  const profile = await artistService.updateProfile(
+    user.id,
+    id as string,
+    req.body,
+  );
   return res.json(profile);
 };
