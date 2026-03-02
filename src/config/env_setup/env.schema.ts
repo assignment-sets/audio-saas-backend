@@ -28,6 +28,10 @@ export const envSchema = z.object({
   // Redis
   REDIS_HOST: z.string(),
   REDIS_PORT: z.coerce.number().int().positive(),
+
+  // AWS / S3
+  AWS_REGION: z.string(),
+  S3_BUCKET_NAME: z.string(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;
