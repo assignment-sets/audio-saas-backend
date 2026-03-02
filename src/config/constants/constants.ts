@@ -1,6 +1,7 @@
 // Queue Names
 export enum QueueNames {
   MAIN = 'main-app-queue',
+  TRANSCODE = 'transcode-queue'
 }
 
 // Outbox Intent Types

@@ -25,6 +25,20 @@ export const mainQueue = new Queue(QueueNames.MAIN, {
   },
 });
 
+// TRANSCODE QUEUE (For Dockerized FFmpeg)
+export const transcodeQueue = new Queue(QueueNames.TRANSCODE, {
+  connection,
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 5000, // Longer delay between retries for heavy processing
+    },
+    removeOnComplete: true, // Keep Redis clean
+    removeOnFail: false, // Keep failed jobs in Redis to inspect why FFmpeg crashed
+  },
+});
+
 /**
  * Type-safe helper to push jobs to the queue
  */
@@ -33,4 +47,14 @@ export const addJob = async <T extends JobName>(
   data: JobDataMap[T],
 ) => {
   return await mainQueue.add(name, data);
+};
+
+/**
+ * Type-safe helper to push jobs to the TRANSCODE queue
+ */
+export const addTranscodeJob = async (
+  name: typeof JobName.TRANSCODE_TRACK,
+  data: JobDataMap[typeof JobName.TRANSCODE_TRACK],
+) => {
+  return await transcodeQueue.add(name, data);
 };
