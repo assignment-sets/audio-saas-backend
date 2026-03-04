@@ -32,6 +32,9 @@ export const envSchema = z.object({
   // AWS / S3
   AWS_REGION: z.string(),
   S3_BUCKET_NAME: z.string(),
+
+  // Webhook secrets
+  AUD_WEBHOOK_SECRET: z.string(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;
