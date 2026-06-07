@@ -1,0 +1,49 @@
+# ---------------------------------------------------------
+# 1. Global Defaults & Line Ending Management
+# ---------------------------------------------------------
+# Treat all files as text and normalize line endings to LF on check-in
+* text=auto eol=lf
+
+# ---------------------------------------------------------
+# 2. Web / Configuration / Code Files (Explicitly Force LF)
+# ---------------------------------------------------------
+*.yaml        text eol=lf
+*.yml         text eol=lf
+*.json        text eol=lf
+*.js          text eol=lf
+*.ts          text eol=lf
+*.jsx         text eol=lf
+*.tsx         text eol=lf
+*.html        text eol=lf
+*.css         text eol=lf
+*.md          text eol=lf
+.gitignore    text eol=lf
+.gitattributes text eol=lf
+
+# ---------------------------------------------------------
+# 3. Shell Scripts (Must use LF or they WILL break on Linux/Docker)
+# ---------------------------------------------------------
+*.sh          text eol=lf
+*.bash        text eol=lf
+
+# ---------------------------------------------------------
+# 4. Binary Files (Strictly Protect from Corruption)
+# ---------------------------------------------------------
+# Deny Git from ever touching line endings in these files
+*.png         binary
+*.jpg         binary
+*.jpeg        binary
+*.gif         binary
+*.ico         binary
+*.webp        binary
+*.svg         text
+*.pdf         binary
+*.zip         binary
+*.tar.gz      binary
+*.mp3         binary
+*.mp4         binary
+
+# ---------------------------------------------------------
+# 5. OS-Specific / IDE Files
+# ---------------------------------------------------------
+.DS_Store     binary
