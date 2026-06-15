@@ -9,7 +9,7 @@ import { OutboxIntentTypes } from '../../config/constants/constants';
 import { FgaPlatformNames } from '../../config/constants/constants';
 
 // Prisma enum import
-import { OutboxStatus } from '@prisma/client';
+import { OutboxStatus, type Outbox } from '@prisma/client';
 
 const connection = {
   host: env.REDIS_HOST,
@@ -21,7 +21,7 @@ const SUPPORTED_INTENTS = [OutboxIntentTypes.CREATE_ARTIST_PROFILE];
 
 export const initOutboxWorker = () => {
   const worker = new Worker<OutboxPayload>(
-    QueueNames.MAIN,
+    QueueNames.ARTIST,
     async (job: Job<OutboxPayload>) => {
       // 1. Guard against wrong job queue types
       if (job.name !== JobName.PROCESS_OUTBOX) return;
@@ -128,7 +128,7 @@ export const initOutboxWorker = () => {
 /**
  * Cleanup logic if the job fails all retries (The Saga Compensating Transaction)
  */
-async function handlePermanentFailure(task: any) {
+async function handlePermanentFailure(task: Outbox) {
   const { id: outboxId, type, payload } = task;
 
   try {

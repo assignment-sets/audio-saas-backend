@@ -1,6 +1,8 @@
 // Queue Names
 export enum QueueNames {
-  MAIN = 'main-app-queue',
+  USER = 'user-queue',
+  ARTIST = 'artist-queue',
+  TRACK = 'track-queue',
   TRANSCODE = 'transcode-queue',
 }
 

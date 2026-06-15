@@ -8,7 +8,7 @@ import {
 } from '../../lib/errors';
 import { logger } from '../../config/logging_setup/logger';
 import { fgaClient } from '../../lib/fga.client';
-import { addJob } from '../../lib/queue.client';
+import { addArtistJob } from '../../lib/queue.client';
 import { JobName } from '../../queues/types';
 import { OutboxStatus, Prisma } from '@prisma/client';
 import { OutboxIntentTypes } from '../../config/constants/constants';
@@ -74,7 +74,7 @@ export const createProfile = async (
     });
 
     try {
-      await addJob(JobName.PROCESS_OUTBOX, { outboxId: outboxTask.id });
+      await addArtistJob(JobName.PROCESS_OUTBOX, { outboxId: outboxTask.id });
     } catch (queueError: unknown) {
       const msg =
         queueError instanceof Error ? queueError.message : String(queueError);

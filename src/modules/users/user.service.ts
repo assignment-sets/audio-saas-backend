@@ -13,7 +13,7 @@ import {
   InternalServerError,
   BadRequestError,
 } from '../../lib/errors';
-import { addJob } from '../../lib/queue.client';
+import { addUserJob } from '../../lib/queue.client';
 import { JobName } from '../../queues/types';
 
 export const syncUser = async (data: SyncUserInput): Promise<User> => {
@@ -60,18 +60,28 @@ export const updateUser = async (
   id: string,
   data: UpdateUserInput,
 ): Promise<User> => {
-  const isSocial = id.includes('google') || id.includes('oauth');
+  const cleanId = id.trim();
+
+  const isSocial = cleanId.includes('google') || cleanId.includes('oauth');
   if (isSocial) {
     throw new ForbiddenError(
       'Updates not permitted for social login accounts.',
     );
   }
 
-  // Fetching current state for potential rollback
-  const existingUser = await prisma.user.findUnique({
-    where: { id },
-    select: { email: true, displayName: true },
-  });
+  let existingUser;
+  try {
+    existingUser = await prisma.user.findFirst({
+      where: { id: cleanId },
+      select: { email: true, displayName: true },
+    });
+  } catch (prismaError) {
+    console.error(
+      '🚨 [CRITICAL] Prisma engine threw an actual error:',
+      prismaError,
+    );
+    throw prismaError;
+  }
 
   if (!existingUser) throw new NotFoundError('User not found');
 
@@ -143,7 +153,7 @@ export const deleteUser = async (id: string): Promise<void> => {
   }
 
   // 3. Queue hard delete cleanup
-  await addJob(JobName.USER_CLEANUP, { userId: id }).catch((err) => {
+  await addUserJob(JobName.USER_CLEANUP, { userId: id }).catch((err) => {
     logger.error({ err, userId: id }, 'Failed to queue cleanup job');
   });
 };

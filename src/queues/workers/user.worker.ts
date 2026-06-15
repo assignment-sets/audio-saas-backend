@@ -19,7 +19,7 @@ const connection = {
  */
 export const initUserWorker = () => {
   const worker = new Worker<UserCleanupPayload>(
-    QueueNames.MAIN,
+    QueueNames.USER,
     async (job: Job<UserCleanupPayload>) => {
       const { userId } = job.data;
 

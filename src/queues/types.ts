@@ -16,6 +16,7 @@ export interface OutboxPayload {
 export interface TranscodePayload {
   trackId: string;
   rawAudioUrl: string;
+  outboxId: string;
 }
 
 export interface JobDataMap {

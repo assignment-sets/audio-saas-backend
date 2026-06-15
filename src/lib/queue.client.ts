@@ -1,56 +1,90 @@
-// src/lib/queue.client.ts ~annotator~
+// src/lib/queue.client.ts
 import { Queue } from 'bullmq';
 import { env } from '../config/env_setup/env';
 import { JobName } from '../queues/types';
 import type { JobDataMap } from '../queues/types';
 import { QueueNames } from '../config/constants/constants';
 
-// Redis connection options
+// Central Redis connection configuration
 const connection = {
   host: env.REDIS_HOST || 'localhost',
   port: env.REDIS_PORT || 6379,
 };
 
-// Create the main background queue
-// We use JobDataMap[JobName] to ensure type safety when adding jobs
-export const mainQueue = new Queue(QueueNames.MAIN, {
-  connection,
-  defaultJobOptions: {
-    attempts: 3, // Retry 3 times if it fails
-    backoff: {
-      type: 'exponential',
-      delay: 1000,
-    },
-    removeOnComplete: true, // Clean up Redis after success
+// Standard background job configuration
+const defaultAppJobOptions = {
+  attempts: 3, // Retry 3 times if it fails
+  backoff: {
+    type: 'exponential' as const,
+    delay: 1000, // Wait 1s, then 2s, then 4s...
   },
+  removeOnComplete: true, // Clean up Redis storage immediately after success
+};
+
+// 1. Instantiate the Dedicated Queues
+export const userQueue = new Queue(QueueNames.USER, {
+  connection,
+  defaultJobOptions: defaultAppJobOptions,
 });
 
-// TRANSCODE QUEUE (For Dockerized FFmpeg)
+export const artistQueue = new Queue(QueueNames.ARTIST, {
+  connection,
+  defaultJobOptions: defaultAppJobOptions,
+});
+
+export const trackQueue = new Queue(QueueNames.TRACK, {
+  connection,
+  defaultJobOptions: defaultAppJobOptions,
+});
+
+// TRANSCODE QUEUE (For Dockerized FFmpeg - keeps failed jobs for debugging)
 export const transcodeQueue = new Queue(QueueNames.TRANSCODE, {
   connection,
   defaultJobOptions: {
     attempts: 3,
     backoff: {
-      type: 'exponential',
-      delay: 5000, // Longer delay between retries for heavy processing
+      type: 'exponential' as const,
+      delay: 5000, // Longer delay between retries because processing audio is heavy
     },
-    removeOnComplete: true, // Keep Redis clean
-    removeOnFail: false, // Keep failed jobs in Redis to inspect why FFmpeg crashed
+    removeOnComplete: true,
+    removeOnFail: false, // CRITICAL: Keeps failed jobs visible in Redis so you can see why FFmpeg broke
   },
 });
 
+// 2. Type-Safe Helper Functions for Your Services
+
 /**
- * Type-safe helper to push jobs to the queue
+ * Pushes general platform tasks (like user soft-delete/cleanup) to the User Queue
  */
-export const addJob = async <T extends JobName>(
-  name: T,
-  data: JobDataMap[T],
+export const addUserJob = async (
+  name: typeof JobName.USER_CLEANUP,
+  data: JobDataMap[typeof JobName.USER_CLEANUP],
 ) => {
-  return await mainQueue.add(name, data);
+  return await userQueue.add(name, data);
 };
 
 /**
- * Type-safe helper to push jobs to the TRANSCODE queue
+ * Pushes outbox events originating from the Artist module to the Artist Queue
+ */
+export const addArtistJob = async (
+  name: typeof JobName.PROCESS_OUTBOX,
+  data: JobDataMap[typeof JobName.PROCESS_OUTBOX],
+) => {
+  return await artistQueue.add(name, data);
+};
+
+/**
+ * Pushes outbox events originating from the Track module to the Track Queue
+ */
+export const addTrackJob = async (
+  name: typeof JobName.PROCESS_OUTBOX,
+  data: JobDataMap[typeof JobName.PROCESS_OUTBOX],
+) => {
+  return await trackQueue.add(name, data);
+};
+
+/**
+ * Pushes processing payloads to the dedicated audio Transcoding Queue
  */
 export const addTranscodeJob = async (
   name: typeof JobName.TRANSCODE_TRACK,
