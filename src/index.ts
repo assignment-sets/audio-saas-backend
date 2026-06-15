@@ -4,10 +4,13 @@ import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import userRouter from './modules/users/user.routes';
 import artistRouter from './modules/artist/artist.routes';
+import trackRouter from './modules/track/track.routes';
 import { env } from './config/env_setup/env';
 import { logger } from './config/logging_setup/logger';
 import { errorHandler } from './middleware/errorHandling/errorHandler';
 import { initUserWorker } from './queues/workers/user.worker';
+import { initOutboxWorker } from './queues/workers/artist.worker';
+import { initTrackWorker } from './queues/workers/track.worker';
 
 const app = express();
 const PORT = env.PORT || 5000;
@@ -28,6 +31,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // Routes
 app.use('/api/user', userRouter);
 app.use('/api/artist', artistRouter);
+app.use('/api/track', trackRouter);
 
 // Health check
 app.get('/health', (req: Request, res: Response) => {
@@ -58,4 +62,7 @@ app.listen(PORT, () => {
 });
 
 initUserWorker();
+initOutboxWorker();
+initTrackWorker();
+
 logger.info('👷 Background Worker listening for jobs...');
