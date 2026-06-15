@@ -17,6 +17,9 @@ export const hydrateUser = async (
   try {
     const user = await prisma.user.findUnique({
       where: { id: auth0Id },
+      include: {
+        artistProfile: true,
+      },
     });
 
     if (!user) {
