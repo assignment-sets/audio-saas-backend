@@ -11,6 +11,7 @@ import crypto from 'crypto';
 import { JobName } from '../../queues/types';
 import { logger } from '../../config/logging_setup/logger';
 import { s3Client, BUCKET_NAME } from '../../lib/s3.client';
+import { engagementRedis } from '../../lib/engagementRedis.client';
 
 export const getTracksByArtist = async (artistId: string): Promise<Track[]> => {
   return await prisma.track.findMany({
@@ -227,17 +228,14 @@ export const recordPlay = async (
   trackId: string,
   durationPlayedSeconds: string | number,
 ): Promise<void> => {
-  // BLUNT WARNING: Under load, this direct DB insert will melt your Postgres.
-  // FUTURE: await queueClient.push('track_plays', { userId, trackId, durationPlayedSeconds, timestamp: Date.now() });
-  // The worker will pull 1000 of these and do a `prisma.trackPlay.createMany`.
-
-  await prisma.trackPlay.create({
-    data: {
-      userId,
-      trackId,
-      durationPlayedSeconds: Number(durationPlayedSeconds),
-    },
+  const payload = JSON.stringify({
+    userId,
+    trackId,
+    durationPlayedSeconds: Number(durationPlayedSeconds),
+    playedAt: new Date().toISOString(),
   });
+
+  await engagementRedis.rpush('engagement:track-plays', payload);
 };
 
 export const likeTrack = async (
@@ -323,4 +321,24 @@ export const generateAudioUploadUrl = async (
     console.error('S3 Presign Error:', error);
     throw new Error('Failed to generate upload URL');
   }
+};
+
+export const processBatchPlays = async (
+  plays: {
+    userId?: string | null;
+    trackId: string;
+    durationPlayedSeconds: number;
+    playedAt?: string;
+  }[],
+): Promise<void> => {
+  if (plays.length === 0) return;
+
+  await prisma.trackPlay.createMany({
+    data: plays.map((play) => ({
+      userId: play.userId || null,
+      trackId: play.trackId,
+      durationPlayedSeconds: play.durationPlayedSeconds,
+      playedAt: play.playedAt ? new Date(play.playedAt) : new Date(),
+    })),
+  });
 };

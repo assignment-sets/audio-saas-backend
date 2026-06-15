@@ -93,3 +93,15 @@ export const handleTranscodeWebhook = async (req: Request, res: Response) => {
 
   return res.status(200).send('OK');
 };
+
+export const handleBatchPlaysWebhook = async (req: Request, res: Response) => {
+  const secret = req.headers['x-webhook-secret'];
+  if (!secret || secret !== env.AUD_WEBHOOK_SECRET) {
+    return res.status(401).json({ error: 'Unauthorized webhook' });
+  }
+
+  const { plays } = req.body;
+  await trackService.processBatchPlays(plays);
+
+  return res.status(200).send('OK');
+};

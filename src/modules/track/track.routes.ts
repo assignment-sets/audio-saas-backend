@@ -12,6 +12,7 @@ import {
   trackPlaySchema,
   generateUploadUrlSchema,
   transcodeWebhookSchema,
+  batchPlaysWebhookSchema,
 } from './track.schema';
 
 const router = Router();
@@ -31,6 +32,12 @@ router.post(
   '/webhook/transcode',
   validate(transcodeWebhookSchema),
   catchAsync(trackController.handleTranscodeWebhook),
+);
+
+router.post(
+  '/webhook/batch-plays',
+  validate(batchPlaysWebhookSchema),
+  catchAsync(trackController.handleBatchPlaysWebhook),
 );
 
 // ==========================================

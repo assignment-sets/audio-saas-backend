@@ -54,8 +54,20 @@ export const transcodeWebhookSchema = z.object({
   error: z.string().optional(),
 });
 
+export const batchPlaysWebhookSchema = z.object({
+  plays: z.array(
+    z.object({
+      userId: z.string().nullable().optional(),
+      trackId: z.string().uuid(),
+      durationPlayedSeconds: z.number().int().nonnegative(),
+      playedAt: z.string().datetime().optional(),
+    }),
+  ),
+});
+
 export type CreateTrackInput = z.infer<typeof createTrackSchema>;
 export type UpdateTrackInput = z.infer<typeof updateTrackSchema>;
 export type TrackPlayInput = z.infer<typeof trackPlaySchema>;
 export type GenerateUploadUrlInput = z.infer<typeof generateUploadUrlSchema>;
 export type TranscodeWebhookInput = z.infer<typeof transcodeWebhookSchema>;
+export type BatchPlaysWebhookInput = z.infer<typeof batchPlaysWebhookSchema>;
