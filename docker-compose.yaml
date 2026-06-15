@@ -3,7 +3,7 @@ services:
   db:
     image: postgres:13-alpine
     container_name: audio-saas-db
-    restart: "no"
+    restart: 'no'
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -14,6 +14,13 @@ services:
   redis:
     image: redis:7-alpine
     container_name: audio-saas-redis
-    restart: "no"
+    restart: 'no'
     ports:
       - '6379:6379'
+
+  engagement-redis:
+    image: redis:7-alpine
+    container_name: audio-saas-engagement-redis
+    restart: 'no'
+    ports:
+      - '6380:6380'
