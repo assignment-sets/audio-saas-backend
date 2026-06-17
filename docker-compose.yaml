@@ -23,4 +23,4 @@ services:
     container_name: audio-saas-engagement-redis
     restart: 'no'
     ports:
-      - '6380:6380'
+      - '6380:6379'
