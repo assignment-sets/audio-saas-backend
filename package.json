@@ -1,6 +1,10 @@
 {
   "name": "audio-sass-backend",
   "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
