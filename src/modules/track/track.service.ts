@@ -333,12 +333,43 @@ export const processBatchPlays = async (
 ): Promise<void> => {
   if (plays.length === 0) return;
 
-  await prisma.trackPlay.createMany({
-    data: plays.map((play) => ({
-      userId: play.userId || null,
+  const uniqueTrackIds = Array.from(new Set(plays.map((p) => p.trackId)));
+  const uniqueUserIds = Array.from(
+    new Set(plays.map((p) => p.userId).filter((id): id is string => !!id)),
+  );
+
+  // Parallel lookup of existing tracks and users to satisfy foreign key constraints
+  const [existingTracks, existingUsers] = await Promise.all([
+    prisma.track.findMany({
+      where: { id: { in: uniqueTrackIds } },
+      select: { id: true },
+    }),
+    prisma.user.findMany({
+      where: { id: { in: uniqueUserIds } },
+      select: { id: true },
+    }),
+  ]);
+
+  const existingTrackIdsSet = new Set(existingTracks.map((t) => t.id));
+  const existingUserIdsSet = new Set(existingUsers.map((u) => u.id));
+
+  // Filter out plays for deleted tracks, and anonymize plays for deleted users
+  const sanitizedPlays = plays
+    .filter((play) => existingTrackIdsSet.has(play.trackId))
+    .map((play) => ({
+      userId:
+        play.userId && existingUserIdsSet.has(play.userId) ? play.userId : null,
       trackId: play.trackId,
       durationPlayedSeconds: play.durationPlayedSeconds,
       playedAt: play.playedAt ? new Date(play.playedAt) : new Date(),
-    })),
+    }));
+
+  if (sanitizedPlays.length === 0) {
+    logger.info('All plays in batch were skipped due to deleted tracks.');
+    return;
+  }
+
+  await prisma.trackPlay.createMany({
+    data: sanitizedPlays,
   });
 };
