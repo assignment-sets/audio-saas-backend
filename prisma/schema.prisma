@@ -80,6 +80,8 @@ model Track {
   state           String   @default("processing") // processing | ready | failed | deleted
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   publishedAt     DateTime? @map("published_at") @db.Timestamptz(6)
+  playCount       Int      @default(0) @map("play_count")
+  likeCount       Int      @default(0) @map("like_count")
 
   // Relations
   artist          ArtistProfile    @relation(fields: [artistId], references: [id], onDelete: Cascade)
