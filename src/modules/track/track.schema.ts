@@ -71,3 +71,15 @@ export type TrackPlayInput = z.infer<typeof trackPlaySchema>;
 export type GenerateUploadUrlInput = z.infer<typeof generateUploadUrlSchema>;
 export type TranscodeWebhookInput = z.infer<typeof transcodeWebhookSchema>;
 export type BatchPlaysWebhookInput = z.infer<typeof batchPlaysWebhookSchema>;
+
+import type { Track } from '@prisma/client';
+
+export type TrackWithEngagement = Track & {
+  isLiked: boolean;
+};
+
+export type TrackWithRelations = Track & {
+  artist: { id: string; artistName: string };
+  album: { id: string; title: string } | null;
+  isLiked: boolean;
+};

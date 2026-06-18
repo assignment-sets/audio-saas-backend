@@ -46,6 +46,13 @@ router.post(
 router.use(jwtCheck);
 router.use(catchAsync(hydrateUser));
 
+// Fetch all ready tracks for an artist (Authenticated/Private view with like status)
+router.get(
+  '/artist/:artistId/pvt',
+  validate(artistIdParamSchema, 'params'),
+  catchAsync(trackController.getTracksByArtistAuthenticated),
+);
+
 // Fetch a single track's metadata (Private dashboard view)
 router.get(
   '/:id',

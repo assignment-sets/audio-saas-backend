@@ -1,5 +1,10 @@
 import { prisma } from '../../lib/prisma';
-import type { CreateTrackInput, UpdateTrackInput } from './track.schema';
+import type {
+  CreateTrackInput,
+  UpdateTrackInput,
+  TrackWithRelations,
+  TrackWithEngagement,
+} from './track.schema';
 import { NotFoundError, ForbiddenError } from '../../lib/errors';
 import { fgaClient } from '../../lib/fga.client';
 import { OutboxStatus, Prisma, type Track } from '@prisma/client';
@@ -13,19 +18,33 @@ import { logger } from '../../config/logging_setup/logger';
 import { s3Client, BUCKET_NAME } from '../../lib/s3.client';
 import { engagementRedis } from '../../lib/engagementRedis.client';
 
-export const getTracksByArtist = async (artistId: string): Promise<Track[]> => {
-  return await prisma.track.findMany({
+export const getTracksByArtist = async (
+  artistId: string,
+  userId?: string,
+): Promise<TrackWithEngagement[]> => {
+  const tracks = await prisma.track.findMany({
     where: {
       artistId,
       state: 'ready', // Don't leak processing or failed tracks
     },
+    include: {
+      likes: userId
+        ? {
+            where: { userId },
+            select: { userId: true },
+          }
+        : undefined,
+    },
     orderBy: { createdAt: 'desc' },
   });
-};
 
-type TrackWithRelations = Track & {
-  artist: { id: string; artistName: string };
-  album: { id: string; title: string } | null;
+  return tracks.map((track) => {
+    const { likes, ...rest } = track as any;
+    return {
+      ...rest,
+      isLiked: likes ? likes.length > 0 : false,
+    };
+  });
 };
 
 export const getTrackById = async (
@@ -47,12 +66,21 @@ export const getTrackById = async (
     include: {
       artist: { select: { artistName: true, id: true } },
       album: { select: { title: true, id: true } },
+      likes: {
+        where: { userId },
+        select: { userId: true },
+      },
     },
   });
 
   if (!track || track.state === 'deleted')
     throw new NotFoundError('Track not found');
-  return track;
+
+  const { likes, ...rest } = track;
+  return {
+    ...rest,
+    isLiked: likes.length > 0,
+  };
 };
 
 export const createTrack = async (

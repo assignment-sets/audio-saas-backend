@@ -9,6 +9,19 @@ export const getTracksByArtist = async (req: Request, res: Response) => {
   return res.json(tracks);
 };
 
+export const getTracksByArtistAuthenticated = async (
+  req: Request,
+  res: Response,
+) => {
+  const user = req.user as User;
+  const { artistId } = req.params;
+  const tracks = await trackService.getTracksByArtist(
+    artistId as string,
+    user.id,
+  );
+  return res.json(tracks);
+};
+
 export const getTrackById = async (req: Request, res: Response) => {
   const user = req.user as User;
   const { id } = req.params;
