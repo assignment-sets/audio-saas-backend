@@ -49,12 +49,20 @@ export const deleteTrack = async (req: Request, res: Response) => {
   return res.status(204).send();
 };
 
-export const recordPlay = async (req: Request, res: Response) => {
+export const recordPlayAuthenticated = async (req: Request, res: Response) => {
   const user = req.user as User;
   const { id } = req.params;
   const { durationPlayedSeconds } = req.body;
 
   await trackService.recordPlay(user.id, id as string, durationPlayedSeconds);
+  return res.status(202).send();
+};
+
+export const recordPlayPublic = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { durationPlayedSeconds } = req.body;
+
+  await trackService.recordPlay(null, id as string, durationPlayedSeconds);
   return res.status(202).send();
 };
 

@@ -40,6 +40,14 @@ router.post(
   catchAsync(trackController.handleBatchPlaysWebhook),
 );
 
+// Record a play (Public, unauthenticated)
+router.post(
+  '/:id/play',
+  validate(trackIdParamSchema, 'params'),
+  validate(trackPlaySchema, 'body'),
+  catchAsync(trackController.recordPlayPublic),
+);
+
 // ==========================================
 // PROTECTED ROUTES
 // ==========================================
@@ -62,10 +70,10 @@ router.get(
 
 // Record a play (Private, requires signed-in user)
 router.post(
-  '/:id/play',
+  '/:id/play/pvt',
   validate(trackIdParamSchema, 'params'),
   validate(trackPlaySchema, 'body'),
-  catchAsync(trackController.recordPlay),
+  catchAsync(trackController.recordPlayAuthenticated),
 );
 
 // Track Management (Artists / Managers)

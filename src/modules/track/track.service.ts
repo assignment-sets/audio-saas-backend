@@ -252,7 +252,7 @@ export const deleteTrack = async (
 // ==========================================
 
 export const recordPlay = async (
-  userId: string,
+  userId: string | null,
   trackId: string,
   durationPlayedSeconds: string | number,
 ): Promise<void> => {
