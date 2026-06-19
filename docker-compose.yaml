@@ -24,3 +24,12 @@ services:
     restart: 'no'
     ports:
       - '6380:6379'
+
+  engagement-bg-svc:
+    container_name: engagement-bg-svc
+    image: audiosass-engagement-bg-svc
+    build: ./packages/engagement-bg-svc
+    restart: 'no'
+    network_mode: host
+    env_file:
+      - ./packages/engagement-bg-svc/.env
