@@ -27,7 +27,16 @@ export const validate = (
       }
 
       // Re-assign validated data to the correct request property
-      (req as any)[target] = result.data;
+      if (target === 'query') {
+        Object.defineProperty(req, 'query', {
+          value: result.data,
+          writable: true,
+          configurable: true,
+          enumerable: true,
+        });
+      } else {
+        (req as any)[target] = result.data;
+      }
       next();
     } catch (error) {
       next(error);
