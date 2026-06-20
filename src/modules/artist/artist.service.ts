@@ -202,3 +202,120 @@ export const updateProfile = async (
     throw error;
   }
 };
+
+export const followArtist = async (
+  userId: string,
+  artistId: string,
+): Promise<void> => {
+  const artist = await prisma.artistProfile.findUnique({
+    where: { id: artistId },
+  });
+  if (!artist) {
+    throw new NotFoundError('Artist profile not found');
+  }
+
+  try {
+    await prisma.artistFollower.upsert({
+      where: {
+        userId_artistId: { userId, artistId },
+      },
+      update: {},
+      create: { userId, artistId },
+    });
+  } catch (error: unknown) {
+    handlePrismaError(error, 'follow artist', { userId, artistId });
+  }
+};
+
+export const unfollowArtist = async (
+  userId: string,
+  artistId: string,
+): Promise<void> => {
+  const artist = await prisma.artistProfile.findUnique({
+    where: { id: artistId },
+  });
+  if (!artist) {
+    throw new NotFoundError('Artist profile not found');
+  }
+
+  try {
+    await prisma.artistFollower.delete({
+      where: {
+        userId_artistId: { userId, artistId },
+      },
+    });
+  } catch (error: unknown) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2025'
+    ) {
+      return;
+    }
+    handlePrismaError(error, 'unfollow artist', { userId, artistId });
+  }
+};
+
+export const checkFollowingStatus = async (
+  userId: string,
+  artistId: string,
+): Promise<boolean> => {
+  const artist = await prisma.artistProfile.findUnique({
+    where: { id: artistId },
+  });
+  if (!artist) {
+    throw new NotFoundError('Artist profile not found');
+  }
+
+  const follower = await prisma.artistFollower.findUnique({
+    where: {
+      userId_artistId: { userId, artistId },
+    },
+  });
+
+  return !!follower;
+};
+
+export const getArtistFollowers = async (
+  artistId: string,
+  limit: number,
+  offset: number,
+): Promise<{
+  followers: Array<{ id: string; displayName: string; followedAt: Date }>;
+  total: number;
+}> => {
+  const artist = await prisma.artistProfile.findUnique({
+    where: { id: artistId },
+  });
+  if (!artist) {
+    throw new NotFoundError('Artist profile not found');
+  }
+
+  const [followersRaw, total] = await Promise.all([
+    prisma.artistFollower.findMany({
+      where: { artistId },
+      skip: offset,
+      take: limit,
+      select: {
+        createdAt: true,
+        user: {
+          select: {
+            id: true,
+            displayName: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.artistFollower.count({
+      where: { artistId },
+    }),
+  ]);
+
+  const followers = followersRaw.map((f) => ({
+    id: f.user.id,
+    displayName: f.user.displayName,
+    followedAt: f.createdAt,
+  }));
+
+  return { followers, total };
+};

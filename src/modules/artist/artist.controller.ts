@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import * as artistService from './artist.service';
 import type { User } from '@prisma/client';
+import type { GetFollowersQueryInput } from './artist.schema';
 
 export const createMyProfile = async (req: Request, res: Response) => {
   const user = req.user as User;
@@ -30,4 +31,39 @@ export const updateProfile = async (req: Request, res: Response) => {
     req.body,
   );
   return res.json(profile);
+};
+
+export const followArtist = async (req: Request, res: Response) => {
+  const user = req.user as User;
+  const { id } = req.params;
+  await artistService.followArtist(user.id, id as string);
+  return res.status(201).send();
+};
+
+export const unfollowArtist = async (req: Request, res: Response) => {
+  const user = req.user as User;
+  const { id } = req.params;
+  await artistService.unfollowArtist(user.id, id as string);
+  return res.status(204).send();
+};
+
+export const getFollowingStatus = async (req: Request, res: Response) => {
+  const user = req.user as User;
+  const { id } = req.params;
+  const isFollowing = await artistService.checkFollowingStatus(
+    user.id,
+    id as string,
+  );
+  return res.json({ isFollowing });
+};
+
+export const getArtistFollowers = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { limit, offset } = req.query as unknown as GetFollowersQueryInput;
+  const result = await artistService.getArtistFollowers(
+    id as string,
+    limit,
+    offset,
+  );
+  return res.json(result);
 };

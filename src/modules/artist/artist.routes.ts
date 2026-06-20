@@ -8,9 +8,18 @@ import {
   createArtistSchema,
   updateArtistSchema,
   artistIdParamSchema,
+  getFollowersQuerySchema,
 } from './artist.schema';
 
 const router = Router();
+
+// Public: View list of followers for an artist
+router.get(
+  '/:id/followers',
+  validate(artistIdParamSchema, 'params'),
+  validate(getFollowersQuerySchema, 'query'),
+  catchAsync(artistController.getArtistFollowers),
+);
 
 // Public: View by artistName
 router.get('/:artistName', catchAsync(artistController.getProfileByName));
@@ -38,6 +47,25 @@ router.patch(
   validate(artistIdParamSchema, 'params'),
   validate(updateArtistSchema, 'body'),
   catchAsync(artistController.updateProfile),
+);
+
+// Social Interactions (Follow/Unfollow)
+router.post(
+  '/:id/follow',
+  validate(artistIdParamSchema, 'params'),
+  catchAsync(artistController.followArtist),
+);
+
+router.delete(
+  '/:id/follow',
+  validate(artistIdParamSchema, 'params'),
+  catchAsync(artistController.unfollowArtist),
+);
+
+router.get(
+  '/:id/following',
+  validate(artistIdParamSchema, 'params'),
+  catchAsync(artistController.getFollowingStatus),
 );
 
 export default router;
