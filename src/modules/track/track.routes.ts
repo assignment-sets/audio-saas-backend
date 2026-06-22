@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { jwtCheck } from '../../middleware/auth/auth0.middleware';
 import { hydrateUser } from '../../middleware/auth/userHydration.middleware';
+import { optionalAuth } from '../../middleware/auth/optionalAuth.middleware';
 import { validate } from '../../middleware/validation/validate.middleware';
 import { catchAsync } from '../../middleware/errorHandling/asyncWrapper';
 import * as trackController from './track.controller';
@@ -25,6 +26,7 @@ const router = Router();
 router.get(
   '/artist/:artistId',
   validate(artistIdParamSchema, 'params'),
+  catchAsync(optionalAuth),
   catchAsync(trackController.getTracksByArtist),
 );
 
@@ -40,12 +42,13 @@ router.post(
   catchAsync(trackController.handleBatchPlaysWebhook),
 );
 
-// Record a play (Public, unauthenticated)
+// Record a play (Handles both public stats and user history)
 router.post(
   '/:id/play',
   validate(trackIdParamSchema, 'params'),
   validate(trackPlaySchema, 'body'),
-  catchAsync(trackController.recordPlayPublic),
+  catchAsync(optionalAuth),
+  catchAsync(trackController.recordPlay),
 );
 
 // ==========================================
@@ -54,26 +57,11 @@ router.post(
 router.use(jwtCheck);
 router.use(catchAsync(hydrateUser));
 
-// Fetch all ready tracks for an artist (Authenticated/Private view with like status)
-router.get(
-  '/artist/:artistId/pvt',
-  validate(artistIdParamSchema, 'params'),
-  catchAsync(trackController.getTracksByArtistAuthenticated),
-);
-
 // Fetch a single track's metadata (Private dashboard view)
 router.get(
   '/:id',
   validate(trackIdParamSchema, 'params'),
   catchAsync(trackController.getTrackById),
-);
-
-// Record a play (Private, requires signed-in user)
-router.post(
-  '/:id/play/pvt',
-  validate(trackIdParamSchema, 'params'),
-  validate(trackPlaySchema, 'body'),
-  catchAsync(trackController.recordPlayAuthenticated),
 );
 
 // Track Management (Artists / Managers)
