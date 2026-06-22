@@ -1,0 +1,42 @@
+model
+  schema 1.1
+
+type user
+
+type platform
+  relations
+    define admin: [user]
+    define moderator: [user]
+
+type artist_profile
+  relations
+    define can_manage: owner or manager or admin from platform_ref
+    define can_moderate: moderator from platform_ref or admin from platform_ref
+    define manager: [user]
+    define owner: [user]
+    define platform_ref: [platform]
+
+type album
+  relations
+    define can_delete: owner from parent_artist or admin from platform_ref
+    define can_edit: owner from parent_artist or manager from parent_artist or admin from platform_ref
+    define parent_artist: [artist_profile]
+    define platform_ref: [platform]
+
+type track
+  relations
+    define can_delete: owner from parent_artist or admin from platform_ref
+    define can_edit: owner from parent_artist or manager from parent_artist or admin from platform_ref
+    define can_moderate: moderator from platform_ref or admin from platform_ref
+    define parent_album: [album]
+    define parent_artist: [artist_profile]
+    define platform_ref: [platform]
+
+type playlist
+  relations
+    define can_delete: owner or admin from platform_ref
+    define can_edit: owner or collaborator
+    define can_view: owner or collaborator
+    define collaborator: [user]
+    define owner: [user]
+    define platform_ref: [platform]
