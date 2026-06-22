@@ -10,8 +10,13 @@ export const createMyProfile = async (req: Request, res: Response) => {
 };
 
 export const getProfileByName = async (req: Request, res: Response) => {
+  const user = req.user as User | undefined;
   const { artistName } = req.params;
-  const profile = await artistService.getProfileByName(artistName as string);
+
+  const profile = await artistService.getProfileByName(
+    artistName as string,
+    user?.id ?? undefined,
+  );
   return res.json(profile);
 };
 

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { jwtCheck } from '../../middleware/auth/auth0.middleware';
 import { hydrateUser } from '../../middleware/auth/userHydration.middleware';
+import { optionalAuth } from '../../middleware/auth/optionalAuth.middleware';
 import { validate } from '../../middleware/validation/validate.middleware';
 import { catchAsync } from '../../middleware/errorHandling/asyncWrapper';
 import * as artistController from './artist.controller';
@@ -21,8 +22,12 @@ router.get(
   catchAsync(artistController.getArtistFollowers),
 );
 
-// Public: View by artistName
-router.get('/:artistName', catchAsync(artistController.getProfileByName));
+// Public: View by artistName (Handles both guests and authenticated track likes)
+router.get(
+  '/:artistName',
+  catchAsync(optionalAuth),
+  catchAsync(artistController.getProfileByName),
+);
 
 // Protected Routes
 router.use(jwtCheck);

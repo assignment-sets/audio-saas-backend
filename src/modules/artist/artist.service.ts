@@ -1,6 +1,10 @@
-import type { ArtistProfile } from '@prisma/client';
+import type { ArtistProfile, Track } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
-import type { CreateArtistInput, UpdateArtistInput } from './artist.schema';
+import type {
+  CreateArtistInput,
+  UpdateArtistInput,
+  ArtistProfileWithRelations,
+} from './artist.schema';
 import {
   NotFoundError,
   BadRequestError,
@@ -95,7 +99,8 @@ export const createProfile = async (
 
 export const getProfileByName = async (
   artistName: string,
-): Promise<ArtistProfile> => {
+  userId?: string,
+): Promise<ArtistProfileWithRelations> => {
   const profile = await prisma.artistProfile.findUnique({
     where: { artistName },
     include: {
@@ -109,6 +114,14 @@ export const getProfileByName = async (
       tracks: {
         where: {
           state: 'ready', // Track uses state instead of deletedAt
+        },
+        include: {
+          likes: userId
+            ? {
+                where: { userId },
+                select: { userId: true },
+              }
+            : undefined,
         },
         orderBy: { createdAt: 'desc' },
         take: 5,
@@ -130,7 +143,18 @@ export const getProfileByName = async (
     throw new NotFoundError('Artist not found');
   }
 
-  return profile;
+  const tracks = profile.tracks.map((track) => {
+    const { likes, ...rest } = track;
+    return {
+      ...rest,
+      isLiked: likes ? likes.length > 0 : false,
+    } as Track & { isLiked: boolean };
+  });
+
+  return {
+    ...profile,
+    tracks,
+  };
 };
 
 export const getProfileById = async (

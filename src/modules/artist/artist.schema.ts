@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { ArtistProfile, Album, Track } from '@prisma/client';
 
 // For validating UUIDs in URL params (get, update, delete)
 export const artistIdParamSchema = z.object({
@@ -28,3 +29,16 @@ export const getFollowersQuerySchema = z.object({
 });
 
 export type GetFollowersQueryInput = z.infer<typeof getFollowersQuerySchema>;
+
+export interface ArtistProfileWithRelations extends ArtistProfile {
+  user: {
+    isBlocked: boolean;
+  } | null;
+  albums: Album[];
+  tracks: Array<Track & { isLiked: boolean }>;
+  _count: {
+    followers: number;
+    tracks: number;
+    albums: number;
+  };
+}
