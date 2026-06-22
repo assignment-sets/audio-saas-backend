@@ -20,7 +20,7 @@ flowchart TD
         PlayDelete[Delete Play] --> PlayTrigger
     end
 
-    LikeTrigger -->|Increment/Decrement| TracksDB[(Tracks Table: play_count / like_count)]
+    LikeTrigger -->|Increment/Decrement| TracksDB[("Tracks Table: play_count / like_count")]
     PlayTrigger -->|Increment/Decrement| TracksDB
 ```
 
@@ -31,40 +31,35 @@ flowchart TD
 
 ---
 
-## 2. Public vs. Private Retrieval Flow
+## 2. Unified Retrieval Flow (Soft-Auth)
 
-The client queries different endpoints depending on the authentication state of the user. This keeps the public endpoint fast and fully cacheable, while the private endpoint dynamically hydates personalization data.
+Instead of maintaining separate public and private endpoints, track lists are retrieved from a single unified route. The `optionalAuth` middleware determines the visitor's authentication state dynamically.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Guest as Unauthenticated Client
-    actor Member as Authenticated Client
+    actor Client
     participant API as SaaS Backend API
+    participant MW as optionalAuth Middleware
     participant DB as PostgreSQL Database
 
-    %% Unauthenticated Flow
-    Guest->>API: GET /api/track/artist/:artistId
-    Note over API: No JWT check required
-    API->>DB: Fetch tracks (select play_count, like_count)
-    DB-->>API: Returns tracks
-    Note over API: Map isLiked = false for all tracks
-    API-->>Guest: Return JSON [ { title: "Song", playCount: 50, likeCount: 10, isLiked: false } ]
-
-    %% Authenticated Flow
-    Member->>API: GET /api/track/artist/:artistId/pvt
-    Note over API: Strict JWT check & Hydrate User
-    API->>DB: Fetch tracks + Include likes where userId = req.user.id
-    DB-->>API: Returns tracks with matching like rows
-    Note over API: Map isLiked = true/false based on like existence
-    API-->>Member: Return JSON [ { title: "Song", playCount: 50, likeCount: 10, isLiked: true } ]
+    Client->>API: GET /api/track/artist/:artistId
+    API->>MW: Run middleware
+    alt Authorization Header Present (Valid Token)
+        MW->>DB: Hydrate User (req.user)
+        API->>DB: Fetch tracks + Include likes where userId = req.user.id
+        DB-->>API: Returns tracks with like relationships
+        Note over API: Map isLiked = true/false based on relation
+    else No Authorization Header (Guest)
+        Note over MW: Set req.user = undefined
+        API->>DB: Fetch tracks
+        DB-->>API: Returns tracks
+        Note over API: Map isLiked = false for all tracks
+    end
+    API-->>Client: Return JSON [ { title: "Song", playCount: 50, likeCount: 10, isLiked } ]
 ```
 
-- **Public Route (`GET /api/track/artist/:artistId`):**
-  - Serves unauthenticated traffic.
-  - Returns raw track data including `playCount` and `likeCount`.
-  - Automatically maps `isLiked: false` for the entire response.
-- **Private Route (`GET /api/track/artist/:artistId/pvt`):**
-  - Protected by Auth0 `jwtCheck` and `hydrateUser`.
-  - Fetches the track list while querying the `likes` relationship specifically for the logged-in user.
-  - Dynamically sets `isLiked` to `true` or `false` based on whether the relation exists.
+- **Unified Route (`GET /api/track/artist/:artistId`):**
+  - Handles both anonymous and logged-in users via `optionalAuth`.
+  - **Guest Behavior:** Returns track data with `isLiked: false` (fast & cacheable on a CDN).
+  - **Authenticated Behavior:** Fetches the tracks while joining the user's `likes` status, dynamically mapping `isLiked: true/false` depending on whether they liked the track.
