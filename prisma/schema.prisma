@@ -58,9 +58,10 @@ model Album {
   artistId      String    @map("artist_id") @db.Uuid
   title         String
   coverArtUrl   String?   @map("cover_art_url")
-  releaseDate   DateTime? @map("release_date") @db.Date
-  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
+  releaseDate   DateTime?   @map("release_date") @db.Date
+  status        AlbumStatus @default(DRAFT)
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  deletedAt     DateTime?   @map("deleted_at") @db.Timestamptz(6)
 
   // Relations
   artist        ArtistProfile @relation(fields: [artistId], references: [id], onDelete: Cascade)
@@ -220,3 +221,9 @@ model Outbox {
   @@index([status, type]) // Fast lookups for workers
   @@map("outbox")
 }
+
+enum AlbumStatus {
+  DRAFT
+  PUBLISHED
+}
+
