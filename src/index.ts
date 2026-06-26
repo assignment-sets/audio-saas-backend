@@ -41,21 +41,6 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // Global Error Handler
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  logger.error(
-    {
-      err: {
-        message: err.message,
-        stack: err.stack,
-      },
-      url: req.url,
-    },
-    'Unhandled server error',
-  );
-
-  res.status(500).json({ error: 'Internal server error' });
-});
-
 app.use(errorHandler);
 
 app.listen(PORT, () => {
