@@ -42,3 +42,16 @@ export interface ArtistProfileWithRelations extends ArtistProfile {
     albums: number;
   };
 }
+
+export const appointManagerSchema = z.object({
+  email: z.string().email(),
+});
+
+export type AppointManagerInput = z.infer<typeof appointManagerSchema>;
+
+export const manageManagerParamSchema = z.object({
+  id: z.string().uuid(),
+  managerId: z.string().min(1),
+});
+
+export type ManageManagerParamInput = z.infer<typeof manageManagerParamSchema>;

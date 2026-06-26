@@ -32,6 +32,8 @@ model User {
   trackPlays         TrackPlay[]
   subscriptions      Subscription[]
   payments           Payment[]
+  artistManagers     ArtistManager[]
+
 
   @@map("users")
 }
@@ -49,6 +51,8 @@ model ArtistProfile {
   albums     Album[]
   tracks     Track[]
   followers  ArtistFollower[]
+  managers   ArtistManager[]
+
 
   @@map("artist_profiles")
 }
@@ -134,6 +138,20 @@ model ArtistFollower {
   @@id([userId, artistId])
   @@map("artist_followers")
 }
+
+model ArtistManager {
+  artistId  String   @map("artist_id") @db.Uuid
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  artist    ArtistProfile @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([artistId, userId])
+  @@map("artist_managers")
+}
+
 
 model TrackLike {
   userId    String   @map("user_id")

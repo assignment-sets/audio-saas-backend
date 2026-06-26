@@ -72,3 +72,28 @@ export const getArtistFollowers = async (req: Request, res: Response) => {
   );
   return res.json(result);
 };
+
+export const appointManager = async (req: Request, res: Response) => {
+  const user = req.user as User;
+  const { id } = req.params;
+  const { email } = req.body;
+
+  await artistService.appointManager(user.id, id as string, email as string);
+  return res.status(201).json({ message: 'Manager appointed successfully.' });
+};
+
+export const revokeManager = async (req: Request, res: Response) => {
+  const user = req.user as User;
+  const { id, managerId } = req.params;
+
+  await artistService.revokeManager(user.id, id as string, managerId as string);
+  return res.status(204).send();
+};
+
+export const listManagers = async (req: Request, res: Response) => {
+  const user = req.user as User;
+  const { id } = req.params;
+
+  const result = await artistService.listManagers(user.id, id as string);
+  return res.json(result);
+};

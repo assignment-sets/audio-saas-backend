@@ -343,3 +343,218 @@ export const getArtistFollowers = async (
 
   return { followers, total };
 };
+
+export const appointManager = async (
+  requesterId: string,
+  artistId: string,
+  email: string,
+): Promise<void> => {
+  // 1. Verify that the requester is the owner of the artist profile
+  const { allowed } = await fgaClient.check({
+    user: `user:${requesterId}`,
+    relation: 'owner',
+    object: `artist_profile:${artistId}`,
+  });
+
+  if (!allowed) {
+    throw new ForbiddenError('Only the artist owner can appoint managers.');
+  }
+
+  // 2. Fetch the artist profile to verify it exists and get its owner info
+  const profile = await prisma.artistProfile.findUnique({
+    where: { id: artistId },
+  });
+
+  if (!profile) {
+    throw new NotFoundError('Artist profile not found.');
+  }
+
+  // 3. Find the target user by email
+  const targetUser = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (!targetUser) {
+    throw new NotFoundError('User with this email not found.');
+  }
+
+  if (targetUser.isBlocked || targetUser.deletedAt) {
+    throw new BadRequestError(
+      'Cannot appoint a deactivated user as a manager.',
+    );
+  }
+
+  // 4. Ensure target user is not already the owner
+  if (profile.userId === targetUser.id) {
+    throw new BadRequestError(
+      'The owner of the artist profile cannot be appointed as a manager.',
+    );
+  }
+
+  // 5. Check if relation already exists in database
+  const existingManager = await prisma.artistManager.findUnique({
+    where: {
+      artistId_userId: { artistId, userId: targetUser.id },
+    },
+  });
+
+  if (existingManager) {
+    throw new BadRequestError(
+      'This user is already a manager of the artist profile.',
+    );
+  }
+
+  // 6. Execute database transaction
+  const outboxTask = await prisma.$transaction(async (tx) => {
+    // Check total count of managers
+    const managerCount = await tx.artistManager.count({
+      where: { artistId },
+    });
+
+    if (managerCount >= 5) {
+      throw new BadRequestError(
+        'An artist profile can have a maximum of 5 managers. Please revoke an existing manager first.',
+      );
+    }
+
+    // Create relation record
+    await tx.artistManager.create({
+      data: {
+        artistId,
+        userId: targetUser.id,
+      },
+    });
+
+    // Create Outbox task
+    const payload: Prisma.InputJsonObject = {
+      artistId,
+      userId: targetUser.id,
+    };
+
+    return await tx.outbox.create({
+      data: {
+        type: OutboxIntentTypes.APPOINT_ARTIST_MANAGER,
+        payload,
+        status: OutboxStatus.PENDING,
+      },
+    });
+  });
+
+  // 7. Queue the Outbox task
+  try {
+    await addArtistJob(JobName.PROCESS_OUTBOX, { outboxId: outboxTask.id });
+  } catch (queueError: unknown) {
+    const msg =
+      queueError instanceof Error ? queueError.message : String(queueError);
+    logger.error(
+      { err: msg, outboxId: outboxTask.id },
+      'Failed to queue outbox task to process manager appointment immediately',
+    );
+  }
+};
+
+export const revokeManager = async (
+  requesterId: string,
+  artistId: string,
+  managerId: string,
+): Promise<void> => {
+  // 1. Verify that the requester is the owner of the artist profile
+  const { allowed } = await fgaClient.check({
+    user: `user:${requesterId}`,
+    relation: 'owner',
+    object: `artist_profile:${artistId}`,
+  });
+
+  if (!allowed) {
+    throw new ForbiddenError('Only the artist owner can revoke managers.');
+  }
+
+  // 2. Verify the artist profile exists
+  const profile = await prisma.artistProfile.findUnique({
+    where: { id: artistId },
+  });
+
+  if (!profile) {
+    throw new NotFoundError('Artist profile not found.');
+  }
+
+  // 3. Check if target user is actually a manager in database
+  const managerRelation = await prisma.artistManager.findUnique({
+    where: {
+      artistId_userId: { artistId, userId: managerId },
+    },
+  });
+
+  if (!managerRelation) {
+    throw new NotFoundError('Manager relationship not found.');
+  }
+
+  // 4. Execute database transaction
+  const outboxTask = await prisma.$transaction(async (tx) => {
+    // Delete relation record
+    await tx.artistManager.delete({
+      where: {
+        artistId_userId: { artistId, userId: managerId },
+      },
+    });
+
+    // Create Outbox task
+    const payload: Prisma.InputJsonObject = {
+      artistId,
+      userId: managerId,
+    };
+
+    return await tx.outbox.create({
+      data: {
+        type: OutboxIntentTypes.REVOKE_ARTIST_MANAGER,
+        payload,
+        status: OutboxStatus.PENDING,
+      },
+    });
+  });
+
+  // 5. Queue the Outbox task
+  try {
+    await addArtistJob(JobName.PROCESS_OUTBOX, { outboxId: outboxTask.id });
+  } catch (queueError: unknown) {
+    const msg =
+      queueError instanceof Error ? queueError.message : String(queueError);
+    logger.error(
+      { err: msg, outboxId: outboxTask.id },
+      'Failed to queue outbox task to process manager revocation immediately',
+    );
+  }
+};
+
+export const listManagers = async (
+  requesterId: string,
+  artistId: string,
+): Promise<Array<{ id: string; email: string; displayName: string }>> => {
+  // 1. Verify that the requester is allowed to manage the artist profile (owners, managers, admins)
+  const { allowed } = await fgaClient.check({
+    user: `user:${requesterId}`,
+    relation: 'can_manage',
+    object: `artist_profile:${artistId}`,
+  });
+
+  if (!allowed) {
+    throw new ForbiddenError('Not authorized to view managers list.');
+  }
+
+  // 2. Fetch managers directly from DB
+  const managerRelations = await prisma.artistManager.findMany({
+    where: { artistId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  return managerRelations.map((m) => m.user);
+};

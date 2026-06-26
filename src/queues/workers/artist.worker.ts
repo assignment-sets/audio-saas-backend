@@ -16,8 +16,11 @@ const connection = {
   port: env.REDIS_PORT,
 };
 
-// Define what this specific worker is allowed to process
-const SUPPORTED_INTENTS = [OutboxIntentTypes.CREATE_ARTIST_PROFILE];
+const SUPPORTED_INTENTS = [
+  OutboxIntentTypes.CREATE_ARTIST_PROFILE,
+  OutboxIntentTypes.APPOINT_ARTIST_MANAGER,
+  OutboxIntentTypes.REVOKE_ARTIST_MANAGER,
+];
 
 export const initOutboxWorker = () => {
   const worker = new Worker<OutboxPayload>(
@@ -76,6 +79,36 @@ export const initOutboxWorker = () => {
                 user: `platform:${FgaPlatformNames.MAIN_APP}`,
                 relation: 'platform_ref',
                 object: `artist_profile:${profileId}`,
+              },
+            ],
+          });
+        } else if (task.type === OutboxIntentTypes.APPOINT_ARTIST_MANAGER) {
+          const { artistId, userId } = task.payload as {
+            artistId: string;
+            userId: string;
+          };
+
+          await fgaClient.write({
+            writes: [
+              {
+                user: `user:${userId}`,
+                relation: 'manager',
+                object: `artist_profile:${artistId}`,
+              },
+            ],
+          });
+        } else if (task.type === OutboxIntentTypes.REVOKE_ARTIST_MANAGER) {
+          const { artistId, userId } = task.payload as {
+            artistId: string;
+            userId: string;
+          };
+
+          await fgaClient.write({
+            deletes: [
+              {
+                user: `user:${userId}`,
+                relation: 'manager',
+                object: `artist_profile:${artistId}`,
               },
             ],
           });
@@ -151,6 +184,58 @@ async function handlePermanentFailure(task: Outbox) {
       logger.warn(
         { profileId },
         'SAGA: Deleted artist profile due to permanent FGA failure',
+      );
+    } else if (type === OutboxIntentTypes.APPOINT_ARTIST_MANAGER) {
+      const { artistId, userId } = payload as {
+        artistId: string;
+        userId: string;
+      };
+
+      // Rollback: delete the manager record since permissions failed
+      await prisma.artistManager.delete({
+        where: {
+          artistId_userId: { artistId, userId },
+        },
+      });
+
+      await prisma.outbox.update({
+        where: { id: outboxId },
+        data: {
+          status: OutboxStatus.FAILED_AND_ROLLED_BACK,
+          lastError: 'Max retries reached. DB manager record rolled back.',
+        },
+      });
+
+      logger.warn(
+        { artistId, userId },
+        'SAGA: Removed database manager record due to permanent FGA failure',
+      );
+    } else if (type === OutboxIntentTypes.REVOKE_ARTIST_MANAGER) {
+      const { artistId, userId } = payload as {
+        artistId: string;
+        userId: string;
+      };
+
+      // Rollback: re-insert DB record since FGA deletion failed (active FGA tuple remains)
+      await prisma.artistManager.upsert({
+        where: {
+          artistId_userId: { artistId, userId },
+        },
+        update: {},
+        create: { artistId, userId },
+      });
+
+      await prisma.outbox.update({
+        where: { id: outboxId },
+        data: {
+          status: OutboxStatus.FAILED_AND_ROLLED_BACK,
+          lastError: 'Max retries reached. Restored DB manager record.',
+        },
+      });
+
+      logger.warn(
+        { artistId, userId },
+        'SAGA: Re-created database manager record due to permanent FGA deletion failure',
       );
     }
   } catch (rollbackError: any) {

@@ -10,6 +10,8 @@ import {
   updateArtistSchema,
   artistIdParamSchema,
   getFollowersQuerySchema,
+  appointManagerSchema,
+  manageManagerParamSchema,
 } from './artist.schema';
 
 const router = Router();
@@ -71,6 +73,26 @@ router.get(
   '/:id/following',
   validate(artistIdParamSchema, 'params'),
   catchAsync(artistController.getFollowingStatus),
+);
+
+// Manager Delegation
+router.post(
+  '/:id/managers',
+  validate(artistIdParamSchema, 'params'),
+  validate(appointManagerSchema, 'body'),
+  catchAsync(artistController.appointManager),
+);
+
+router.delete(
+  '/:id/managers/:managerId',
+  validate(manageManagerParamSchema, 'params'),
+  catchAsync(artistController.revokeManager),
+);
+
+router.get(
+  '/:id/managers',
+  validate(artistIdParamSchema, 'params'),
+  catchAsync(artistController.listManagers),
 );
 
 export default router;
