@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import * as userService from './user.service';
 import type { User } from '@prisma/client';
+import { prisma } from '../../lib/prisma';
 
 /**
  * Synchronize user from Auth0 post-registration hook
@@ -21,7 +22,22 @@ export const syncUser = async (req: Request, res: Response) => {
  */
 export const getCurrentUser = async (req: Request, res: Response) => {
   // If the request reached here, req.user is guaranteed to exist
-  return res.json(req.user);
+  const user = req.user as any;
+
+  // Fetch artist profiles where this user is appointed as a manager
+  const managerRelations = await prisma.artistManager.findMany({
+    where: { userId: user.id },
+    include: {
+      artist: true,
+    },
+  });
+
+  const managedProfiles = managerRelations.map((mr) => mr.artist);
+
+  return res.json({
+    ...user,
+    managedProfiles,
+  });
 };
 
 /**
