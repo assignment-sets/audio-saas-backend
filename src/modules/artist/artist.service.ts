@@ -138,8 +138,8 @@ export const getProfileByName = async (
     },
   });
 
-  // If the user is soft-deleted, the extension makes profile return null automatically
-  if (!profile || profile.user?.isBlocked) {
+  // If the user is soft-deleted or blocked, treat as not found
+  if (!profile || !profile.user || profile.user.isBlocked) {
     throw new NotFoundError('Artist not found');
   }
 
