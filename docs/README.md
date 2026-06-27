@@ -1,37 +1,39 @@
 # Audio SaaS Backend System Documentation
 
-This folder contains the architectural and flow documentation for the backend system modules.
+This directory contains the architectural, data flow, and API schema documentation for all backend modules.
 
 ---
 
-## Module Index
+## 1. Module Index
 
 ### 🔐 Authentication & Authorization
 
-- [Soft-Auth & Route Consolidation](modules/auth/optionalAuth.md) — Dynamic token verification, guest fallback, and `isLiked` personalization logic.
-
-### 💿 Albums
-
-- [Album Lifecycle & Tracklist](modules/album/albumLifecycle.md) — Draft/Published state constraints, OpenFGA relation mappings, surgical track list patching.
-
-### 🎵 Tracks
-
-- [Track Engagement & Triggers](modules/track/engagementReadsAndTriggers.md) — Play and like counter triggers, soft-auth unified retrieval sequence.
-- [Record Track Play](modules/track/recordTrackPlay.md) — Logging play streams, processing batch plays, and queue worker triggers.
-- [Create Track](modules/track/createTrack.md) — Presigned S3 upload URLs, state transitions, transcoding flows.
-- [Delete Track](modules/track/deleteTrack.md) — File purging, DB cleanup, FGA tuple teardown.
-
-### 🎤 Artists
-
-- [Create Artist Profile](modules/artist/createArtist.md) — Initial onboarding, slug reservation, FGA setup.
-- [Manager Delegation](modules/artist/managerDelegation.md) — Relational DB tracking, limit enforcement, and asynchronous OpenFGA outbox synchronization.
+- [Authentication & Authorization Middleware](modules/auth/authMiddleware.md) — JWT checking, Postgres hydration, and `optionalAuth` guest fallback.
 
 ### 👤 Users
 
-- [Create User (Sync)](modules/user/createUser.md) — Auth0 post-registration webhook synchronization.
-- [Update User](modules/user/updateUser.md) — Basic profile fields updates, metadata schema.
-- [Delete User](modules/user/deleteUser.md) — Account deactivation, data scrubbing, cascade details.
+- [User Profile Lifecycle](modules/user/userLifecycle.md) — Auth0 synchronization, profile updates, and async hard deletes via background queues.
+
+### 🎤 Artists
+
+- [Artist Profile Lifecycle](modules/artist/artistLifecycle.md) — Onboarding slugs validation, outbox workers, and compensating Sagas.
+- [Artist Social & Followers](modules/artist/artistRetrieval.md) — Follow/unfollow mechanics and cursor-based paginated followers list.
+- [Manager Delegation](modules/artist/managerDelegation.md) — FGA appointment syncs and rollback Sagas.
+
+### 🎵 Tracks
+
+- [Track Lifecycle & Pipelines](modules/track/trackLifecycle.md) — Presigned S3 uploads, transcoding hooks, and hard deletion teardowns.
+- [Track Engagement Counters](modules/track/trackEngagement.md) — Likes/plays trigger counters and Redis play event logging buffer.
+- [Track Retrieval & Listings](modules/track/trackRetrieval.md) — Unified artist track lists and cursor-based pagination.
+
+### 💿 Albums
+
+- [Album Lifecycle & Guardrails](modules/album/albumLifecycle.md) — Status flow rules (DRAFT vs PUBLISHED) and publishing limits.
+- [Album Tracklist updates](modules/album/albumTracklist.md) — Transactional additions, removals, and Dense Index reordering.
+- [Album Retrieval & Views](modules/album/albumRetrieval.md) — Consolidated GET listing showing draft visibility based on FGA credentials.
 
 ### 📋 Playlists
 
-- [Playlist Lifecycle & Tracklist](modules/playlist/playlistLifecycle.md) — Capacity caps, gapless reordering mechanics, and OpenFGA visibility logic.
+- [Playlist Lifecycle & Policies](modules/playlist/playlistLifecycle.md) — CRUD operations, maximum playlist caps, and private/public FGA visibility.
+- [Playlist Tracklist Management](modules/playlist/playlistTracklist.md) — Capacity bounds and optimized SQL bulk `CASE` re-sequencing.
+- [Playlist Retrieval & Searches](modules/playlist/playlistRetrieval.md) — Retrieve by ID (with dynamic like hydration) and paginated searches/listings.

@@ -1,6 +1,6 @@
-# Album Lifecycle & Tracklist Management
+# Album Lifecycle & Validation Guardrails
 
-This document details the lifecycle stages (`DRAFT` and `PUBLISHED`), FGA security mapping, and surgical track list updates for Albums.
+This document details the lifecycle stages (`DRAFT` and `PUBLISHED`) of an album, FGA ownership mappings, and publication constraints.
 
 ---
 
@@ -8,10 +8,10 @@ This document details the lifecycle stages (`DRAFT` and `PUBLISHED`), FGA securi
 
 ```mermaid
 stateDiagram-v2
-    [*] --> DRAFT : POST /api/album (Creates Draft & writes OpenFGA parent_artist tuple)
-    DRAFT --> DRAFT : PATCH /api/album/:id (Surgical Track list updates, reordering)
-    DRAFT --> PUBLISHED : POST /api/album/:id/publish (Validates constraints, switches status)
-    PUBLISHED --> [*] : DELETE /api/album/:id (Deletes Album record, disassociates tracks, purges FGA)
+    [*] --> DRAFT : POST /api/album (Creates Draft & writes OpenFGA parent_artist relation)
+    DRAFT --> DRAFT : PATCH /api/album/{id} (Surgical Track list updates)
+    DRAFT --> PUBLISHED : POST /api/album/{id}/publish (Validates guardrails, switches status)
+    PUBLISHED --> [*] : DELETE /api/album/{id} (Deletes Album, sets tracks' albumId to null, purges FGA)
 
     note right of DRAFT
         - Visible ONLY to artist managers (FGA checked)
@@ -26,39 +26,9 @@ stateDiagram-v2
 
 ---
 
-## 2. Surgical Tracklist Updates (`PATCH /api/album/:id`)
+## 2. Publication Guardrails (`POST /api/album/:id/publish`)
 
-When updating the tracks inside a draft album, mutations run sequentially inside a database transaction to prevent race conditions:
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Controller
-    participant Service
-    participant Database (Postgres)
-
-    Client->>Controller: PATCH /api/album/:id { addTrackIds, removeTrackIds, trackOrder }
-    Controller->>Service: updateAlbum(userId, albumId, payload)
-    Note over Service: 1. FGA Check: can_edit?
-    Note over Service: 2. Block if Status is PUBLISHED
-
-    rect rgb(230, 240, 255)
-        Note over Service: Database Transaction ($transaction)
-        Service->>Database: 3. Remove Tracks (set albumId = null, trackNumber = null)
-        Service->>Database: 4. Add Tracks (verify state='ready', append to end: currentMax + i)
-        Service->>Database: 5. Reorder/Resequence (re-index all tracks 1 to N to close gaps)
-    end
-
-    Database-->>Service: Return updated Album & Tracks
-    Service-->>Controller: Return Album
-    Controller-->>Client: 200 OK
-```
-
----
-
-## 3. Publication Guardrails (`POST /api/album/:id/publish`)
-
-Before transitioning an album status to `PUBLISHED`, the service performs strict validation checks:
+Before transitioning an album's status from `DRAFT` to `PUBLISHED`, the service performs strict validation checks:
 
 - **State Constraint**: Only tracks in the `ready` state are counted.
 - **Track Count**: Number of ready tracks must satisfy: `7 <= count <= 30`.

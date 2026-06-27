@@ -1,12 +1,12 @@
-# Soft-Auth & Unified Route Consolidation
+# Authentication & Authorization Middleware
 
-The application consolidates public and private endpoints into single unified routes using the `optionalAuth` middleware. This eliminates the need for separate `/pvt` routes, simplifies frontend integration, and enables dynamic personalization (like `isLiked` flags) for authenticated users while maintaining public access for guests.
+This document outlines the authentication, JWT check, and hydration middleware configuration in the application.
 
 ---
 
 ## 1. Optional Authentication Flow
 
-The `optionalAuth` middleware intercepts the request. If an `Authorization` header is present, it validates the Auth0 JWT. If valid, it hydrates `req.user` from the database. If absent, the request proceeds anonymously.
+Consolidated read routes use the `optionalAuth` middleware. If an `Authorization` header is present, it validates the Auth0 JWT. If valid, it hydrates `req.user` from the database. If absent, the request proceeds anonymously (allowing guest access).
 
 ```mermaid
 flowchart TD
@@ -25,9 +25,16 @@ flowchart TD
 
 ---
 
-## 2. Consolidated Routes Reference
+## 2. Protected Routes (jwtCheck & hydrateUser)
 
-The following table summarizes how consolidated endpoints handle guest vs. authenticated requests:
+For write and mutation routes, authentication is strictly enforced using `jwtCheck` and `hydrateUser` sequentially:
+
+1.  **`jwtCheck`**: Verifies the Auth0 JWT access token. If missing or invalid, throws a `401 Unauthorized` error.
+2.  **`hydrateUser`**: Queries PostgreSQL to load the full `User` record into `req.user`. If `isBlocked` is true or `deletedAt` is populated, it acts as a **Kill Switch**, throwing a `403 Forbidden` error.
+
+---
+
+## 3. Consolidated Routes Reference
 
 | Route Path                        | Method | Guest (Anonymous) Behavior                                                            | Authenticated Behavior                                                                                         |
 | :-------------------------------- | :----: | :------------------------------------------------------------------------------------ | :------------------------------------------------------------------------------------------------------------- |
@@ -35,10 +42,3 @@ The following table summarizes how consolidated endpoints handle guest vs. authe
 | `GET /api/album/:id`              | `GET`  | Blocks `DRAFT` albums (403). Returns published album with `isLiked: false` on tracks. | Allows `DRAFT` album preview if requester is the creator (via OpenFGA). Returns personalized `isLiked` status. |
 | `GET /api/artist/:artistName`     | `GET`  | Returns public artist profile. `isLiked` is `false` for all tracks.                   | Returns artist profile. Tracks have personalized `isLiked` status.                                             |
 | `POST /api/track/:id/play`        | `POST` | Records play count for analytics without linking to a user profile.                   | Records play count and logs track play to user's personalized history.                                         |
-
----
-
-## 3. Implementation Details
-
-- **JWT Interception:** Wrapping `express-oauth2-jwt-bearer`'s `auth` handler allows catch-block redirection. If validation errors occur on present headers, we return an auth error, preventing spoofing attempts with invalid tokens.
-- **Strict Checks:** Account deactivation/block switches are validated synchronously on DB hydration, immediately returning a `403` to prevent actions by suspended users.
