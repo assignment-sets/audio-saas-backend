@@ -2,7 +2,10 @@ import type { Request, Response } from 'express';
 import * as trackService from './track.service';
 import type { User } from '@prisma/client';
 import { env } from '../../config/env_setup/env';
-import type { GetTracksByArtistQuery } from './track.schema';
+import type {
+  GetTracksByArtistQuery,
+  GetTracksDashboardQuery,
+} from './track.schema';
 
 export const getTracksByArtist = async (req: Request, res: Response) => {
   const user = req.user as User | undefined;
@@ -117,4 +120,21 @@ export const handleBatchPlaysWebhook = async (req: Request, res: Response) => {
   await trackService.processBatchPlays(plays);
 
   return res.status(200).send('OK');
+};
+
+export const getTracksByArtistDashboard = async (
+  req: Request,
+  res: Response,
+) => {
+  const user = req.user as User;
+  const { artistId } = req.params;
+  const { limit, cursor } = req.query as unknown as GetTracksDashboardQuery;
+
+  const result = await trackService.getTracksByArtistDashboard(
+    user.id,
+    artistId as string,
+    limit,
+    cursor,
+  );
+  return res.json(result);
 };

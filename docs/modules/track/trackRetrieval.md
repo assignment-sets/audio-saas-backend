@@ -76,3 +76,14 @@ To fetch tracks efficiently without database offset penalties (which slow down a
 ```
 
 If `hasMore` is `true`, pass the `nextCursor` value into the `cursor` query parameter on the subsequent request to fetch the next page.
+
+---
+
+## 3. Artist Dashboard Tracks Retrieval (`GET /api/track/artist/:artistId/dashboard`)
+
+For the creator studio/dashboard, authorized managers and owners can query all tracks belonging to an artist, regardless of their transcoding or validation states:
+
+- **Authentication**: Enforced (`jwtCheck` + `hydrateUser`).
+- **Authorization**: OpenFGA checks if the active requester has `can_manage` permission on `artist_profile:${artistId}`. If unauthorized, returns `403 Forbidden`.
+- **States Included**: Returns all tracks in `ready`, `processing`, and `failed` states (strictly excluding `deleted` ones).
+- **Pagination**: Supports standard cursor-based pagination using the `limit` and `cursor` query parameters.

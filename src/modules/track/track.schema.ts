@@ -92,3 +92,12 @@ export const getTracksByArtistQuerySchema = z.object({
 export type GetTracksByArtistQuery = z.infer<
   typeof getTracksByArtistQuerySchema
 >;
+
+export const getTracksDashboardQuerySchema = z.object({
+  cursor: z.string().uuid().optional(),
+  limit: z.string().regex(/^\d+$/).transform(Number).default(10),
+});
+
+export type GetTracksDashboardQuery = z.infer<
+  typeof getTracksDashboardQuerySchema
+>;

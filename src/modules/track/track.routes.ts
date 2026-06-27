@@ -15,6 +15,7 @@ import {
   transcodeWebhookSchema,
   batchPlaysWebhookSchema,
   getTracksByArtistQuerySchema,
+  getTracksDashboardQuerySchema,
 } from './track.schema';
 
 const router = Router();
@@ -58,6 +59,14 @@ router.post(
 // ==========================================
 router.use(jwtCheck);
 router.use(catchAsync(hydrateUser));
+
+// Fetch all tracks for artist dashboard (regardless of state, requires can_manage)
+router.get(
+  '/artist/:artistId/dashboard',
+  validate(artistIdParamSchema, 'params'),
+  validate(getTracksDashboardQuerySchema, 'query'),
+  catchAsync(trackController.getTracksByArtistDashboard),
+);
 
 // Fetch a single track's metadata (Private dashboard view)
 router.get(

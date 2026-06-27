@@ -422,3 +422,50 @@ export const processBatchPlays = async (
     data: sanitizedPlays,
   });
 };
+
+export const getTracksByArtistDashboard = async (
+  userId: string,
+  artistId: string,
+  limit: number,
+  cursor?: string,
+): Promise<{
+  tracks: Track[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}> => {
+  // 1. Check FGA permissions for managing the artist profile
+  const { allowed } = await fgaClient.check({
+    user: `user:${userId}`,
+    relation: 'can_manage',
+    object: `artist_profile:${artistId}`,
+  });
+
+  if (!allowed) {
+    throw new ForbiddenError(
+      'Not authorized to view the dashboard tracks for this artist profile',
+    );
+  }
+
+  const take = limit + 1;
+  const tracks = await prisma.track.findMany({
+    take,
+    skip: cursor ? 1 : undefined,
+    cursor: cursor ? { id: cursor } : undefined,
+    where: {
+      artistId,
+      state: { not: 'deleted' },
+    },
+    orderBy: { id: 'asc' },
+  });
+
+  const hasMore = tracks.length > limit;
+  const data = hasMore ? tracks.slice(0, limit) : tracks;
+  const nextCursor =
+    hasMore && data.length > 0 ? data[data.length - 1]!.id : null;
+
+  return {
+    tracks: data,
+    nextCursor,
+    hasMore,
+  };
+};
