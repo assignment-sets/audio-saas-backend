@@ -45,16 +45,10 @@ export const getAlbumById = async (req: Request, res: Response) => {
 };
 
 export const getAlbumsByArtist = async (req: Request, res: Response) => {
+  const user = req.user as User | undefined;
   const { artistId } = req.params;
-  const albums = await albumService.getAlbumsByArtist(artistId as string);
-  return res.json(albums);
-};
-
-export const getAlbumsByArtistPrivate = async (req: Request, res: Response) => {
-  const user = req.user as User;
-  const { artistId } = req.params;
-  const albums = await albumService.getAlbumsByArtistPrivate(
-    user.id,
+  const albums = await albumService.getAlbumsByArtist(
+    user?.id ?? null,
     artistId as string,
   );
   return res.json(albums);

@@ -400,27 +400,8 @@ export const getAlbumById = async (
   };
 };
 
-export const getAlbumsByArtist = async (artistId: string): Promise<Album[]> => {
-  const artist = await prisma.artistProfile.findUnique({
-    where: { id: artistId },
-  });
-
-  if (!artist) {
-    throw new NotFoundError('Artist profile not found');
-  }
-
-  // Public view: only return PUBLISHED albums
-  return await prisma.album.findMany({
-    where: {
-      artistId,
-      status: 'PUBLISHED',
-    },
-    orderBy: { releaseDate: 'desc' },
-  });
-};
-
-export const getAlbumsByArtistPrivate = async (
-  userId: string,
+export const getAlbumsByArtist = async (
+  userId: string | null,
   artistId: string,
 ): Promise<any[]> => {
   const artist = await prisma.artistProfile.findUnique({
@@ -431,49 +412,61 @@ export const getAlbumsByArtistPrivate = async (
     throw new NotFoundError('Artist profile not found');
   }
 
-  // Check FGA permissions for managing the artist profile
-  const { allowed } = await fgaClient.check({
-    user: `user:${userId}`,
-    relation: 'can_manage',
-    object: `artist_profile:${artistId}`,
-  });
-
-  if (!allowed) {
-    throw new ForbiddenError(
-      'Not authorized to view albums for this artist profile',
-    );
+  // 1. Check FGA permissions for managing the artist profile if userId is provided
+  let hasManagePermission = false;
+  if (userId) {
+    const { allowed } = await fgaClient.check({
+      user: `user:${userId}`,
+      relation: 'can_manage',
+      object: `artist_profile:${artistId}`,
+    });
+    hasManagePermission = allowed ?? false;
   }
 
-  // Return all albums (DRAFT and PUBLISHED) with their tracks and likes mapped
-  const albums = await prisma.album.findMany({
-    where: {
-      artistId,
-    },
-    include: {
-      tracks: {
-        orderBy: { trackNumber: 'asc' },
-        include: {
-          likes: {
-            where: { userId },
-            select: { userId: true },
+  // 2. Fetch based on authorization state
+  if (hasManagePermission) {
+    // Return all albums (DRAFT and PUBLISHED) with their tracks and likes mapped
+    const albums = await prisma.album.findMany({
+      where: {
+        artistId,
+      },
+      include: {
+        tracks: {
+          orderBy: { trackNumber: 'asc' },
+          include: {
+            likes: userId
+              ? {
+                  where: { userId },
+                  select: { userId: true },
+                }
+              : undefined,
           },
         },
       },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
+      orderBy: { createdAt: 'desc' },
+    });
 
-  return albums.map((album) => {
-    const tracksMapped = album.tracks.map((track) => {
-      const { likes, ...rest } = track as any;
+    return albums.map((album) => {
+      const tracksMapped = album.tracks.map((track) => {
+        const { likes, ...rest } = track as any;
+        return {
+          ...rest,
+          isLiked: likes ? likes.length > 0 : false,
+        };
+      });
       return {
-        ...rest,
-        isLiked: likes ? likes.length > 0 : false,
+        ...album,
+        tracks: tracksMapped,
       };
     });
-    return {
-      ...album,
-      tracks: tracksMapped,
-    };
-  });
+  } else {
+    // Public view: only return PUBLISHED albums (without track lists)
+    return await prisma.album.findMany({
+      where: {
+        artistId,
+        status: 'PUBLISHED',
+      },
+      orderBy: { releaseDate: 'desc' },
+    });
+  }
 };

@@ -18,10 +18,11 @@ const router = Router();
 // PUBLIC ROUTES
 // ==========================================
 
-// Get all published albums for an artist
+// Get all albums for an artist (dynamic draft visibility based on requester manager auth status)
 router.get(
   '/artist/:artistId',
   validate(artistIdParamSchema, 'params'),
+  catchAsync(optionalAuth),
   catchAsync(albumController.getAlbumsByArtist),
 );
 
@@ -38,13 +39,6 @@ router.get(
 // ==========================================
 router.use(jwtCheck);
 router.use(catchAsync(hydrateUser));
-
-// Get all albums for an artist (including DRAFT, private view for manager)
-router.get(
-  '/artist/:artistId/pvt',
-  validate(artistIdParamSchema, 'params'),
-  catchAsync(albumController.getAlbumsByArtistPrivate),
-);
 
 // Create a new album (DRAFT)
 router.post(
