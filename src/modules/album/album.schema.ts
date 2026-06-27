@@ -26,3 +26,12 @@ export const updateAlbumSchema = z.object({
 
 export type CreateAlbumInput = z.infer<typeof createAlbumSchema>;
 export type UpdateAlbumInput = z.infer<typeof updateAlbumSchema>;
+
+export const getAlbumsByArtistQuerySchema = z.object({
+  cursor: z.string().uuid().optional(),
+  limit: z.string().regex(/^\d+$/).transform(Number).default(10),
+});
+
+export type GetAlbumsByArtistQuery = z.infer<
+  typeof getAlbumsByArtistQuerySchema
+>;

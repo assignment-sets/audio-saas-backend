@@ -403,7 +403,13 @@ export const getAlbumById = async (
 export const getAlbumsByArtist = async (
   userId: string | null,
   artistId: string,
-): Promise<any[]> => {
+  limit: number,
+  cursor?: string,
+): Promise<{
+  albums: any[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}> => {
   const artist = await prisma.artistProfile.findUnique({
     where: { id: artistId },
   });
@@ -423,10 +429,15 @@ export const getAlbumsByArtist = async (
     hasManagePermission = allowed ?? false;
   }
 
+  const take = limit + 1;
+
   // 2. Fetch based on authorization state
   if (hasManagePermission) {
     // Return all albums (DRAFT and PUBLISHED) with their tracks and likes mapped
-    const albums = await prisma.album.findMany({
+    const albumsRaw = await prisma.album.findMany({
+      take,
+      skip: cursor ? 1 : undefined,
+      cursor: cursor ? { id: cursor } : undefined,
       where: {
         artistId,
       },
@@ -443,10 +454,15 @@ export const getAlbumsByArtist = async (
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { id: 'asc' },
     });
 
-    return albums.map((album) => {
+    const hasMore = albumsRaw.length > limit;
+    const data = hasMore ? albumsRaw.slice(0, limit) : albumsRaw;
+    const nextCursor =
+      hasMore && data.length > 0 ? data[data.length - 1]!.id : null;
+
+    const albums = data.map((album) => {
       const tracksMapped = album.tracks.map((track) => {
         const { likes, ...rest } = track as any;
         return {
@@ -459,14 +475,34 @@ export const getAlbumsByArtist = async (
         tracks: tracksMapped,
       };
     });
+
+    return {
+      albums,
+      nextCursor,
+      hasMore,
+    };
   } else {
     // Public view: only return PUBLISHED albums (without track lists)
-    return await prisma.album.findMany({
+    const albumsRaw = await prisma.album.findMany({
+      take,
+      skip: cursor ? 1 : undefined,
+      cursor: cursor ? { id: cursor } : undefined,
       where: {
         artistId,
         status: 'PUBLISHED',
       },
-      orderBy: { releaseDate: 'desc' },
+      orderBy: { id: 'asc' },
     });
+
+    const hasMore = albumsRaw.length > limit;
+    const albums = hasMore ? albumsRaw.slice(0, limit) : albumsRaw;
+    const nextCursor =
+      hasMore && albums.length > 0 ? albums[albums.length - 1]!.id : null;
+
+    return {
+      albums,
+      nextCursor,
+      hasMore,
+    };
   }
 };

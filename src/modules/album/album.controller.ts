@@ -1,7 +1,11 @@
 import type { Request, Response } from 'express';
 import * as albumService from './album.service';
 import type { User } from '@prisma/client';
-import type { CreateAlbumInput, UpdateAlbumInput } from './album.schema';
+import type {
+  CreateAlbumInput,
+  UpdateAlbumInput,
+  GetAlbumsByArtistQuery,
+} from './album.schema';
 
 export const createAlbum = async (req: Request, res: Response) => {
   const user = req.user as User;
@@ -47,9 +51,12 @@ export const getAlbumById = async (req: Request, res: Response) => {
 export const getAlbumsByArtist = async (req: Request, res: Response) => {
   const user = req.user as User | undefined;
   const { artistId } = req.params;
-  const albums = await albumService.getAlbumsByArtist(
+  const { limit, cursor } = req.query as unknown as GetAlbumsByArtistQuery;
+  const result = await albumService.getAlbumsByArtist(
     user?.id ?? null,
     artistId as string,
+    limit,
+    cursor,
   );
-  return res.json(albums);
+  return res.json(result);
 };

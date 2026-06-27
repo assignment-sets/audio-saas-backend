@@ -10,6 +10,7 @@ import {
   artistIdParamSchema,
   createAlbumSchema,
   updateAlbumSchema,
+  getAlbumsByArtistQuerySchema,
 } from './album.schema';
 
 const router = Router();
@@ -18,10 +19,11 @@ const router = Router();
 // PUBLIC ROUTES
 // ==========================================
 
-// Get all albums for an artist (dynamic draft visibility based on requester manager auth status)
+// Get all albums for an artist (dynamic draft visibility based on requester manager auth status, supports cursor pagination)
 router.get(
   '/artist/:artistId',
   validate(artistIdParamSchema, 'params'),
+  validate(getAlbumsByArtistQuerySchema, 'query'),
   catchAsync(optionalAuth),
   catchAsync(albumController.getAlbumsByArtist),
 );
