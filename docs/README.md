@@ -24,9 +24,14 @@ This folder contains the architectural and flow documentation for the backend sy
 ### 🎤 Artists
 
 - [Create Artist Profile](modules/artist/createArtist.md) — Initial onboarding, slug reservation, FGA setup.
+- [Manager Delegation](modules/artist/managerDelegation.md) — Relational DB tracking, limit enforcement, and asynchronous OpenFGA outbox synchronization.
 
 ### 👤 Users
 
 - [Create User (Sync)](modules/user/createUser.md) — Auth0 post-registration webhook synchronization.
 - [Update User](modules/user/updateUser.md) — Basic profile fields updates, metadata schema.
 - [Delete User](modules/user/deleteUser.md) — Account deactivation, data scrubbing, cascade details.
+
+### 📋 Playlists
+
+- [Playlist Lifecycle & Tracklist](modules/playlist/playlistLifecycle.md) — Capacity caps, gapless reordering mechanics, and OpenFGA visibility logic.
