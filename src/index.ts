@@ -6,6 +6,8 @@ import userRouter from './modules/users/user.routes';
 import artistRouter from './modules/artist/artist.routes';
 import trackRouter from './modules/track/track.routes';
 import albumRouter from './modules/album/album.routes';
+import playlistRouter from './modules/playlist/playlist.routes';
+
 import { env } from './config/env_setup/env';
 import { logger } from './config/logging_setup/logger';
 import { errorHandler } from './middleware/errorHandling/errorHandler';
@@ -34,6 +36,7 @@ app.use('/api/user', userRouter);
 app.use('/api/artist', artistRouter);
 app.use('/api/track', trackRouter);
 app.use('/api/album', albumRouter);
+app.use('/api/playlist', playlistRouter);
 
 // Health check
 app.get('/health', (req: Request, res: Response) => {
