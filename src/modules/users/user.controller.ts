@@ -34,9 +34,16 @@ export const getCurrentUser = async (req: Request, res: Response) => {
 
   const managedProfiles = managerRelations.map((mr) => mr.artist);
 
+  // Fetch playlists owned by this user
+  const playlists = await prisma.playlist.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: 'desc' },
+  });
+
   return res.json({
     ...user,
     managedProfiles,
+    playlists,
   });
 };
 
