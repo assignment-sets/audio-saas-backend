@@ -108,6 +108,9 @@ export const getProfileByName = async (
         select: { isBlocked: true }, // deletedAt is handled by the Prisma extension
       },
       albums: {
+        where: {
+          status: 'PUBLISHED',
+        },
         orderBy: { releaseDate: 'desc' },
         take: 5,
       },
@@ -132,7 +135,9 @@ export const getProfileByName = async (
           tracks: {
             where: { state: 'ready' }, // Only count ready tracks
           },
-          albums: true,
+          albums: {
+            where: { status: 'PUBLISHED' },
+          },
         },
       },
     },
