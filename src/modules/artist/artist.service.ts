@@ -126,7 +126,7 @@ export const getProfileByName = async (
               }
             : undefined,
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ playCount: 'desc' }, { likeCount: 'desc' }],
         take: 5,
       },
       _count: {
