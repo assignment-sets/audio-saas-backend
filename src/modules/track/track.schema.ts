@@ -83,3 +83,12 @@ export type TrackWithRelations = Track & {
   album: { id: string; title: string } | null;
   isLiked: boolean;
 };
+
+export const getTracksByArtistQuerySchema = z.object({
+  cursor: z.string().uuid().optional(),
+  limit: z.string().regex(/^\d+$/).transform(Number).default(10),
+});
+
+export type GetTracksByArtistQuery = z.infer<
+  typeof getTracksByArtistQuerySchema
+>;

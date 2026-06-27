@@ -14,6 +14,7 @@ import {
   generateUploadUrlSchema,
   transcodeWebhookSchema,
   batchPlaysWebhookSchema,
+  getTracksByArtistQuerySchema,
 } from './track.schema';
 
 const router = Router();
@@ -22,10 +23,11 @@ const router = Router();
 // PUBLIC ROUTES
 // ==========================================
 
-// Fetch all ready tracks for an artist
+// Fetch all ready tracks for an artist (supports guest and cursor pagination)
 router.get(
   '/artist/:artistId',
   validate(artistIdParamSchema, 'params'),
+  validate(getTracksByArtistQuerySchema, 'query'),
   catchAsync(optionalAuth),
   catchAsync(trackController.getTracksByArtist),
 );

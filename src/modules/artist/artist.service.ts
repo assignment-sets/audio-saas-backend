@@ -302,10 +302,11 @@ export const checkFollowingStatus = async (
 export const getArtistFollowers = async (
   artistId: string,
   limit: number,
-  offset: number,
+  cursor?: string,
 ): Promise<{
   followers: Array<{ id: string; displayName: string; followedAt: Date }>;
-  total: number;
+  nextCursor: string | null;
+  hasMore: boolean;
 }> => {
   const artist = await prisma.artistProfile.findUnique({
     where: { id: artistId },
@@ -314,34 +315,43 @@ export const getArtistFollowers = async (
     throw new NotFoundError('Artist profile not found');
   }
 
-  const [followersRaw, total] = await Promise.all([
-    prisma.artistFollower.findMany({
-      where: { artistId },
-      skip: offset,
-      take: limit,
-      select: {
-        createdAt: true,
-        user: {
-          select: {
-            id: true,
-            displayName: true,
+  const take = limit + 1;
+  const followersRaw = await prisma.artistFollower.findMany({
+    where: { artistId },
+    take,
+    skip: cursor ? 1 : undefined,
+    cursor: cursor
+      ? {
+          userId_artistId: {
+            userId: cursor,
+            artistId,
           },
+        }
+      : undefined,
+    select: {
+      createdAt: true,
+      user: {
+        select: {
+          id: true,
+          displayName: true,
         },
       },
-      orderBy: { createdAt: 'desc' },
-    }),
-    prisma.artistFollower.count({
-      where: { artistId },
-    }),
-  ]);
+    },
+    orderBy: { userId: 'asc' },
+  });
 
-  const followers = followersRaw.map((f) => ({
+  const hasMore = followersRaw.length > limit;
+  const data = hasMore ? followersRaw.slice(0, limit) : followersRaw;
+  const nextCursor =
+    hasMore && data.length > 0 ? data[data.length - 1]!.user.id : null;
+
+  const followers = data.map((f) => ({
     id: f.user.id,
     displayName: f.user.displayName,
     followedAt: f.createdAt,
   }));
 
-  return { followers, total };
+  return { followers, nextCursor, hasMore };
 };
 
 export const appointManager = async (

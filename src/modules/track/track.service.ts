@@ -20,9 +20,19 @@ import { engagementRedis } from '../../lib/engagementRedis.client';
 
 export const getTracksByArtist = async (
   artistId: string,
-  userId?: string,
-): Promise<TrackWithEngagement[]> => {
-  const tracks = await prisma.track.findMany({
+  userId: string | null,
+  limit: number,
+  cursor?: string,
+): Promise<{
+  tracks: TrackWithEngagement[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}> => {
+  const take = limit + 1;
+  const tracksRaw = await prisma.track.findMany({
+    take,
+    skip: cursor ? 1 : undefined,
+    cursor: cursor ? { id: cursor } : undefined,
     where: {
       artistId,
       state: 'ready', // Don't leak processing or failed tracks
@@ -35,16 +45,27 @@ export const getTracksByArtist = async (
           }
         : undefined,
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { id: 'asc' },
   });
 
-  return tracks.map((track) => {
+  const hasMore = tracksRaw.length > limit;
+  const data = hasMore ? tracksRaw.slice(0, limit) : tracksRaw;
+  const nextCursor =
+    hasMore && data.length > 0 ? data[data.length - 1]!.id : null;
+
+  const tracks = data.map((track) => {
     const { likes, ...rest } = track as any;
     return {
       ...rest,
       isLiked: likes ? likes.length > 0 : false,
     };
   });
+
+  return {
+    tracks,
+    nextCursor,
+    hasMore,
+  };
 };
 
 export const getTrackById = async (

@@ -64,11 +64,11 @@ export const getFollowingStatus = async (req: Request, res: Response) => {
 
 export const getArtistFollowers = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { limit, offset } = req.query as unknown as GetFollowersQueryInput;
+  const { limit, cursor } = req.query as unknown as GetFollowersQueryInput;
   const result = await artistService.getArtistFollowers(
     id as string,
     limit,
-    offset,
+    cursor,
   );
   return res.json(result);
 };

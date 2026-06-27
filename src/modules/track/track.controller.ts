@@ -2,15 +2,20 @@ import type { Request, Response } from 'express';
 import * as trackService from './track.service';
 import type { User } from '@prisma/client';
 import { env } from '../../config/env_setup/env';
+import type { GetTracksByArtistQuery } from './track.schema';
 
 export const getTracksByArtist = async (req: Request, res: Response) => {
   const user = req.user as User | undefined;
   const { artistId } = req.params;
-  const tracks = await trackService.getTracksByArtist(
+  const { limit, cursor } = req.query as unknown as GetTracksByArtistQuery;
+
+  const result = await trackService.getTracksByArtist(
     artistId as string,
-    user?.id ?? undefined,
+    user?.id ?? null,
+    limit,
+    cursor,
   );
-  return res.json(tracks);
+  return res.json(result);
 };
 
 export const getTrackById = async (req: Request, res: Response) => {

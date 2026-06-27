@@ -25,7 +25,7 @@ export type UpdateArtistInput = z.infer<typeof updateArtistSchema>;
 
 export const getFollowersQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(20),
-  offset: z.coerce.number().int().nonnegative().default(0),
+  cursor: z.string().optional(),
 });
 
 export type GetFollowersQueryInput = z.infer<typeof getFollowersQuerySchema>;
