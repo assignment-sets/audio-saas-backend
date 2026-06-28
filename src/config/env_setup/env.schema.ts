@@ -37,6 +37,15 @@ export const envSchema = z.object({
 
   // Webhook secrets
   AUD_WEBHOOK_SECRET: z.string(),
+
+  // Stripe
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  STRIPE_LITE_PRICE_ID: z.string().default('price_lite_placeholder'),
+  STRIPE_PRO_PRICE_ID: z.string().default('price_pro_placeholder'),
+  STRIPE_PORTAL_CONFIG_ID: z.string(),
+  STRIPE_SUCCESS_URL: z.string().url().default('http://localhost:5173/'),
+  STRIPE_CANCEL_URL: z.string().url().default('http://localhost:5173/'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;
