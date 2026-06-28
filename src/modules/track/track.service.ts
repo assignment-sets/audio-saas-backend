@@ -429,7 +429,7 @@ export const getTracksByArtistDashboard = async (
   limit: number,
   cursor?: string,
 ): Promise<{
-  tracks: Track[];
+  tracks: (Track & { isLiked: boolean })[];
   nextCursor: string | null;
   hasMore: boolean;
 }> => {
@@ -447,7 +447,7 @@ export const getTracksByArtistDashboard = async (
   }
 
   const take = limit + 1;
-  const tracks = await prisma.track.findMany({
+  const tracksRaw = await prisma.track.findMany({
     take,
     skip: cursor ? 1 : undefined,
     cursor: cursor ? { id: cursor } : undefined,
@@ -455,16 +455,30 @@ export const getTracksByArtistDashboard = async (
       artistId,
       state: { not: 'deleted' },
     },
+    include: {
+      likes: {
+        where: { userId },
+        select: { userId: true },
+      },
+    },
     orderBy: { id: 'asc' },
   });
 
-  const hasMore = tracks.length > limit;
-  const data = hasMore ? tracks.slice(0, limit) : tracks;
+  const hasMore = tracksRaw.length > limit;
+  const data = hasMore ? tracksRaw.slice(0, limit) : tracksRaw;
   const nextCursor =
     hasMore && data.length > 0 ? data[data.length - 1]!.id : null;
 
+  const tracks = data.map((track) => {
+    const { likes, ...rest } = track as any;
+    return {
+      ...rest,
+      isLiked: likes ? likes.length > 0 : false,
+    };
+  });
+
   return {
-    tracks: data,
+    tracks,
     nextCursor,
     hasMore,
   };
