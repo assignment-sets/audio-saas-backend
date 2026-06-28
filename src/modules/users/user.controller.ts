@@ -22,7 +22,7 @@ export const syncUser = async (req: Request, res: Response) => {
  */
 export const getCurrentUser = async (req: Request, res: Response) => {
   // If the request reached here, req.user is guaranteed to exist
-  const user = req.user as any;
+  const user = req.user!;
 
   // Fetch artist profiles where this user is appointed as a manager
   const managerRelations = await prisma.artistManager.findMany({

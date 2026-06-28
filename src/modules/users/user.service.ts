@@ -1,5 +1,27 @@
-import type { User } from '@prisma/client';
+import type { User, Subscription } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
+import { env } from '../../config/env_setup/env';
+
+export enum UserTier {
+  FREE = 'FREE',
+  LITE = 'LITE',
+  PRO = 'PRO',
+}
+
+export const getUserTier = (subscriptions: Subscription[]): UserTier => {
+  const activeSub = subscriptions.find(
+    (sub) =>
+      (sub.status === 'active' || sub.status === 'trialing') &&
+      new Date(sub.currentPeriodEnd) > new Date(),
+  );
+
+  if (!activeSub) return UserTier.FREE;
+  if (activeSub.stripePriceId === env.STRIPE_PRO_PRICE_ID) return UserTier.PRO;
+  if (activeSub.stripePriceId === env.STRIPE_LITE_PRICE_ID)
+    return UserTier.LITE;
+
+  return UserTier.FREE;
+};
 import type {
   SyncUserInput,
   UpdateUserInput,

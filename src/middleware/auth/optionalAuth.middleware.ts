@@ -2,6 +2,7 @@ import { auth } from 'express-oauth2-jwt-bearer';
 import { env } from '../../config/env_setup/env';
 import { prisma } from '../../lib/prisma';
 import type { Request, Response, NextFunction } from 'express';
+import { getUserTier } from '../../modules/users/user.service';
 
 // Underlying JWT verifier from Auth0
 const underlyingJwtCheck = auth({
@@ -37,7 +38,10 @@ export const optionalAuth = async (
     try {
       const user = await prisma.user.findUnique({
         where: { id: auth0Id },
-        include: { artistProfile: true },
+        include: {
+          artistProfile: true,
+          subscriptions: true,
+        },
       });
 
       // Kill switch for deactivated accounts
@@ -47,7 +51,14 @@ export const optionalAuth = async (
           .json({ error: 'Your account has been deactivated.' });
       }
 
-      (req as any).user = user;
+      if (user) {
+        const tier = getUserTier(user.subscriptions);
+        req.user = {
+          ...user,
+          tier,
+        };
+      }
+
       next();
     } catch (dbError) {
       next(dbError);
