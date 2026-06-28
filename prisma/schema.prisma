@@ -187,6 +187,7 @@ model Subscription {
   id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId               String   @map("user_id")
   stripeSubscriptionId String   @unique @map("stripe_subscription_id")
+  stripePriceId        String   @map("stripe_price_id")
   status               String   // active | past_due | canceled | trialing
   currentPeriodStart   DateTime @map("current_period_start") @db.Timestamptz(6)
   currentPeriodEnd     DateTime @map("current_period_end") @db.Timestamptz(6)
