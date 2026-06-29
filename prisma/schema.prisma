@@ -54,6 +54,7 @@ model ArtistProfile {
   managers   ArtistManager[]
 
 
+  @@index([artistName(ops: raw("gin_trgm_ops"))], type: Gin)
   @@map("artist_profiles")
 }
 
@@ -71,6 +72,7 @@ model Album {
   artist        ArtistProfile @relation(fields: [artistId], references: [id], onDelete: Cascade)
   tracks        Track[]
 
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin)
   @@map("albums")
 }
 
@@ -95,6 +97,7 @@ model Track {
   likes           TrackLike[]
   plays           TrackPlay[]
 
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin)
   @@map("tracks")
 }
 
@@ -110,6 +113,7 @@ model Playlist {
   user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   tracks       PlaylistTrack[]
 
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin)
   @@map("playlists")
 }
 
