@@ -8,6 +8,7 @@ import trackRouter from './modules/track/track.routes';
 import albumRouter from './modules/album/album.routes';
 import playlistRouter from './modules/playlist/playlist.routes';
 import paymentRouter from './modules/payment/payment.routes';
+import searchRouter from './modules/search/search.routes';
 
 import { env } from './config/env_setup/env';
 import { logger } from './config/logging_setup/logger';
@@ -40,6 +41,7 @@ app.use('/api/track', trackRouter);
 app.use('/api/album', albumRouter);
 app.use('/api/playlist', playlistRouter);
 app.use('/api/payment', paymentRouter);
+app.use('/api/search', searchRouter);
 
 // Health check
 app.get('/health', (req: Request, res: Response) => {
