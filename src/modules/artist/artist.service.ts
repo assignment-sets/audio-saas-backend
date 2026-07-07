@@ -10,6 +10,8 @@ import {
   BadRequestError,
   ForbiddenError,
 } from '../../lib/errors';
+import { getUserTier, UserTier } from '../users/user.service';
+import { SUBSCRIPTION_LIMITS } from '../../config/constants/subscriptionLimits';
 import { logger } from '../../config/logging_setup/logger';
 import { fgaClient } from '../../lib/fga.client';
 import { addArtistJob } from '../../lib/queue.client';
@@ -421,16 +423,8 @@ export const appointManager = async (
 
   // 6. Execute database transaction
   const outboxTask = await prisma.$transaction(async (tx) => {
-    // Check total count of managers
-    const managerCount = await tx.artistManager.count({
-      where: { artistId },
-    });
-
-    if (managerCount >= 5) {
-      throw new BadRequestError(
-        'An artist profile can have a maximum of 5 managers. Please revoke an existing manager first.',
-      );
-    }
+    // Enforce tier-based manager limits
+    await enforceManagerLimit(tx, artistId, profile.userId);
 
     // Create relation record
     await tx.artistManager.create({
@@ -572,4 +566,26 @@ export const listManagers = async (
   });
 
   return managerRelations.map((m) => m.user);
+};
+
+export const enforceManagerLimit = async (
+  tx: any,
+  artistId: string,
+  ownerId: string,
+): Promise<void> => {
+  const subscriptions = await tx.subscription.findMany({
+    where: { userId: ownerId },
+  });
+  const tier = getUserTier(subscriptions);
+  const limits = SUBSCRIPTION_LIMITS[tier];
+
+  const managerCount = await tx.artistManager.count({
+    where: { artistId },
+  });
+
+  if (managerCount >= limits.maxManagersPerArtist) {
+    throw new BadRequestError(
+      `Your current tier (${tier}) only allows a maximum of ${limits.maxManagersPerArtist} manager(s). Please upgrade to add more.`,
+    );
+  }
 };

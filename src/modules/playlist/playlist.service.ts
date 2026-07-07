@@ -11,6 +11,8 @@ import type {
   CreatePlaylistInput,
   UpdatePlaylistInput,
 } from './playlist.schema';
+import { getUserTier, UserTier } from '../users/user.service';
+import { SUBSCRIPTION_LIMITS } from '../../config/constants/subscriptionLimits';
 
 /**
  * Resequences the positions of all specified tracks in a playlist using a single raw SQL bulk query.
@@ -43,16 +45,8 @@ export const createPlaylist = async (
 ): Promise<Playlist> => {
   // Execute transactional checks
   return await prisma.$transaction(async (tx) => {
-    // 1. Enforce hard cap: max 10 playlists per user
-    const playlistCount = await tx.playlist.count({
-      where: { userId },
-    });
-
-    if (playlistCount >= 10) {
-      throw new BadRequestError(
-        'Playlist limit reached. You can only create up to 10 playlists.',
-      );
-    }
+    // Enforce tier-based limits (quantity and privacy)
+    await enforcePlaylistLimits(tx, userId, true, data.isPublic);
 
     // 2. Create Playlist record
     const playlist = await tx.playlist.create({
@@ -188,6 +182,9 @@ export const updatePlaylist = async (
   }
 
   return await prisma.$transaction(async (tx) => {
+    // Enforce tier-based limits (privacy rules on updates)
+    await enforcePlaylistLimits(tx, userId, false, data.isPublic);
+
     // A. Update metadata
     const updatedPlaylist = await tx.playlist.update({
       where: { id },
@@ -324,16 +321,13 @@ export const addTracksToPlaylist = async (
       }
     }
 
-    // 3. Verify target capacity (max 100)
-    const currentCount = await tx.playlistTrack.count({
-      where: { playlistId: id },
-    });
-
-    if (currentCount + trackIds.length > 100) {
-      throw new BadRequestError(
-        'Playlist capacity exceeded. Playlists are limited to a maximum of 100 tracks.',
-      );
-    }
+    // 3. Verify target capacity (tier-based limits)
+    await enforcePlaylistCapacityLimit(
+      tx,
+      id,
+      playlist.userId,
+      trackIds.length,
+    );
 
     // 4. Find current max position to append sequentially
     const maxTrack = await tx.playlistTrack.findFirst({
@@ -501,4 +495,58 @@ export const getUserPlaylists = async (
     nextCursor,
     hasMore,
   };
+};
+
+export const enforcePlaylistLimits = async (
+  tx: any,
+  userId: string,
+  isCreating: boolean,
+  requestedPrivacy?: boolean,
+): Promise<void> => {
+  const subscriptions = await tx.subscription.findMany({
+    where: { userId },
+  });
+  const tier = getUserTier(subscriptions);
+  const limits = SUBSCRIPTION_LIMITS[tier];
+
+  if (requestedPrivacy === false && !limits.allowPrivatePlaylists) {
+    throw new BadRequestError(
+      'Private playlists are only available on paid subscription plans.',
+    );
+  }
+
+  if (isCreating) {
+    const playlistCount = await tx.playlist.count({
+      where: { userId },
+    });
+
+    if (playlistCount >= limits.maxPlaylists) {
+      throw new BadRequestError(
+        `Playlist limit reached. Your current tier (${tier}) only allows up to ${limits.maxPlaylists} playlists.`,
+      );
+    }
+  }
+};
+
+export const enforcePlaylistCapacityLimit = async (
+  tx: any,
+  playlistId: string,
+  ownerId: string,
+  newTracksCount: number,
+): Promise<void> => {
+  const subscriptions = await tx.subscription.findMany({
+    where: { userId: ownerId },
+  });
+  const tier = getUserTier(subscriptions);
+  const limits = SUBSCRIPTION_LIMITS[tier];
+
+  const currentCount = await tx.playlistTrack.count({
+    where: { playlistId },
+  });
+
+  if (currentCount + newTracksCount > limits.maxTracksPerPlaylist) {
+    throw new BadRequestError(
+      `Playlist capacity exceeded. Your current tier (${tier}) limits playlists to a maximum of ${limits.maxTracksPerPlaylist} tracks.`,
+    );
+  }
 };
