@@ -4,6 +4,7 @@ import {
   NotFoundError,
   BadRequestError,
   ForbiddenError,
+  PaymentRequiredError,
 } from '../../lib/errors';
 import { logger } from '../../config/logging_setup/logger';
 import type { Playlist, Track, Prisma } from '@prisma/client';
@@ -510,7 +511,7 @@ export const enforcePlaylistLimits = async (
   const limits = SUBSCRIPTION_LIMITS[tier];
 
   if (requestedPrivacy === false && !limits.allowPrivatePlaylists) {
-    throw new BadRequestError(
+    throw new PaymentRequiredError(
       'Private playlists are only available on paid subscription plans.',
     );
   }
@@ -521,7 +522,7 @@ export const enforcePlaylistLimits = async (
     });
 
     if (playlistCount >= limits.maxPlaylists) {
-      throw new BadRequestError(
+      throw new PaymentRequiredError(
         `Playlist limit reached. Your current tier (${tier}) only allows up to ${limits.maxPlaylists} playlists.`,
       );
     }
@@ -545,7 +546,7 @@ export const enforcePlaylistCapacityLimit = async (
   });
 
   if (currentCount + newTracksCount > limits.maxTracksPerPlaylist) {
-    throw new BadRequestError(
+    throw new PaymentRequiredError(
       `Playlist capacity exceeded. Your current tier (${tier}) limits playlists to a maximum of ${limits.maxTracksPerPlaylist} tracks.`,
     );
   }

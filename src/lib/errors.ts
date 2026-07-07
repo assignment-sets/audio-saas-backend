@@ -49,3 +49,9 @@ export class ValidationError extends AppError {
     this.details = details;
   }
 }
+
+export class PaymentRequiredError extends AppError {
+  constructor(message = 'Payment required / subscription limit exceeded') {
+    super(message, 402);
+  }
+}

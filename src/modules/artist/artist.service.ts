@@ -9,6 +9,7 @@ import {
   NotFoundError,
   BadRequestError,
   ForbiddenError,
+  PaymentRequiredError,
 } from '../../lib/errors';
 import { getUserTier, UserTier } from '../users/user.service';
 import { SUBSCRIPTION_LIMITS } from '../../config/constants/subscriptionLimits';
@@ -584,7 +585,7 @@ export const enforceManagerLimit = async (
   });
 
   if (managerCount >= limits.maxManagersPerArtist) {
-    throw new BadRequestError(
+    throw new PaymentRequiredError(
       `Your current tier (${tier}) only allows a maximum of ${limits.maxManagersPerArtist} manager(s). Please upgrade to add more.`,
     );
   }

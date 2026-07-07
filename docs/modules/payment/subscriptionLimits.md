@@ -51,3 +51,25 @@ Implemented in the artist service file: [artist.service.ts](../../../src/modules
   - _Purpose_: Enforces the maximum number of manager accounts that can be assigned to an artist profile, based on the owner's subscription tier.
   - _Called By_:
     - `appointManager`
+
+---
+
+## 3. Limit Breach API Error Response (HTTP 402)
+
+When any of the tier limits are breached, the backend API rejects the request with an HTTP **`402 Payment Required`** status code. This allows frontend clients to intercept the status globally and display an Upgrade Modal.
+
+### API Error Body Structure
+
+```json
+{
+  "success": false,
+  "error": "The detailed limit message here"
+}
+```
+
+### Potential Error Message Strings
+
+- **Max Playlists Limit**: `"Playlist limit reached. Your current tier (FREE) only allows up to 3 playlists."`
+- **Playlist Privacy Option Restricted**: `"Private playlists are only available on paid subscription plans."`
+- **Playlist Capacity Limit**: `"Playlist capacity exceeded. Your current tier (FREE) limits playlists to a maximum of 15 tracks."`
+- **Artist Profile Managers Limit**: `"Your current tier (FREE) only allows a maximum of 1 manager(s). Please upgrade to add more."`
