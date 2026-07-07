@@ -67,3 +67,26 @@ export const deleteUser = async (req: Request, res: Response) => {
   await userService.deleteUser(user.id);
   return res.status(204).send();
 };
+
+export const createApiKey = async (req: Request, res: Response) => {
+  const user = req.user!;
+  const { name } = req.body;
+
+  const result = await userService.createApiKey(user.id, name);
+  return res.status(201).json(result);
+};
+
+export const listApiKeys = async (req: Request, res: Response) => {
+  const user = req.user!;
+
+  const result = await userService.listApiKeys(user.id);
+  return res.json(result);
+};
+
+export const deleteApiKey = async (req: Request, res: Response) => {
+  const user = req.user!;
+  const { id } = req.params;
+
+  await userService.deleteApiKey(user.id, id as string);
+  return res.status(204).send();
+};

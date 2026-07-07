@@ -1,11 +1,15 @@
 import { Router } from 'express';
 import { internalSyncAuth } from '../../middleware/auth/internalAuth.middleware';
-import { jwtCheck } from '../../middleware/auth/auth0.middleware';
-import { hydrateUser } from '../../middleware/auth/userHydration.middleware';
+import { requireAuth } from '../../middleware/auth/requireAuth.middleware';
 import { validate } from '../../middleware/validation/validate.middleware';
 import { catchAsync } from '../../middleware/errorHandling/asyncWrapper';
 import * as userController from './user.controller';
-import { syncUserSchema, updateUserSchema } from './user.schema';
+import {
+  syncUserSchema,
+  updateUserSchema,
+  createApiKeySchema,
+  deleteApiKeySchema,
+} from './user.schema';
 
 const router = Router();
 
@@ -22,11 +26,10 @@ router.post(
 
 /**
  * 2. Security & Data Hydration Layer
- * Every route defined AFTER these two lines requires a valid JWT
+ * Every route defined AFTER this line requires a valid JWT or API key
  * and an active (non-blocked) user in our database.
  */
-router.use(jwtCheck);
-router.use(catchAsync(hydrateUser));
+router.use(requireAuth);
 
 /**
  * 3. Protected User Routes
@@ -41,5 +44,22 @@ router.patch(
 );
 
 router.delete('/', catchAsync(userController.deleteUser));
+
+/**
+ * 4. API Key Management
+ */
+router.post(
+  '/keys',
+  validate(createApiKeySchema),
+  catchAsync(userController.createApiKey),
+);
+
+router.get('/keys', catchAsync(userController.listApiKeys));
+
+router.delete(
+  '/keys/:id',
+  validate(deleteApiKeySchema, 'params'),
+  catchAsync(userController.deleteApiKey),
+);
 
 export default router;

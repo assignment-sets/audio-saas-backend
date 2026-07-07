@@ -19,3 +19,14 @@ export const updateUserSchema = z.object({
 export type SyncUserInput = z.infer<typeof syncUserSchema>;
 export type GetUserInput = z.infer<typeof getUserSchema>;
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
+
+export const createApiKeySchema = z.object({
+  name: z.string().min(1, 'API key name is required').max(100),
+});
+
+export const deleteApiKeySchema = z.object({
+  id: z.string().uuid(),
+});
+
+export type CreateApiKeyInput = z.infer<typeof createApiKeySchema>;
+export type DeleteApiKeyInput = z.infer<typeof deleteApiKeySchema>;

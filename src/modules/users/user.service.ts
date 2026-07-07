@@ -1,4 +1,5 @@
 import type { User, Subscription } from '@prisma/client';
+import crypto from 'crypto';
 import { prisma } from '../../lib/prisma';
 import { env } from '../../config/env_setup/env';
 
@@ -177,5 +178,63 @@ export const deleteUser = async (id: string): Promise<void> => {
   // 3. Queue hard delete cleanup
   await addUserJob(JobName.USER_CLEANUP, { userId: id }).catch((err) => {
     logger.error({ err, userId: id }, 'Failed to queue cleanup job');
+  });
+};
+
+export const createApiKey = async (
+  userId: string,
+  name: string,
+): Promise<{ id: string; name: string; rawKey: string; createdAt: Date }> => {
+  const rawKey = 'ak_live_' + crypto.randomBytes(24).toString('hex');
+  const keyHash = crypto.createHash('sha256').update(rawKey).digest('hex');
+
+  const apiKey = await prisma.apiKey.create({
+    data: {
+      userId,
+      name,
+      keyHash,
+    },
+  });
+
+  return {
+    id: apiKey.id,
+    name: apiKey.name,
+    rawKey,
+    createdAt: apiKey.createdAt,
+  };
+};
+
+export const listApiKeys = async (
+  userId: string,
+): Promise<Array<{ id: string; name: string; createdAt: Date }>> => {
+  return prisma.apiKey.findMany({
+    where: { userId },
+    select: {
+      id: true,
+      name: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+};
+
+export const deleteApiKey = async (
+  userId: string,
+  id: string,
+): Promise<void> => {
+  const key = await prisma.apiKey.findUnique({
+    where: { id },
+  });
+
+  if (!key) {
+    throw new NotFoundError('API Key not found');
+  }
+
+  if (key.userId !== userId) {
+    throw new ForbiddenError('You are not authorized to delete this API Key');
+  }
+
+  await prisma.apiKey.delete({
+    where: { id },
   });
 };

@@ -1,6 +1,5 @@
 import { Router } from 'express';
-import { jwtCheck } from '../../middleware/auth/auth0.middleware';
-import { hydrateUser } from '../../middleware/auth/userHydration.middleware';
+import { requireAuth } from '../../middleware/auth/requireAuth.middleware';
 import { optionalAuth } from '../../middleware/auth/optionalAuth.middleware';
 import { validate } from '../../middleware/validation/validate.middleware';
 import { catchAsync } from '../../middleware/errorHandling/asyncWrapper';
@@ -39,8 +38,7 @@ router.get(
 // ==========================================
 // PROTECTED ROUTES
 // ==========================================
-router.use(jwtCheck);
-router.use(catchAsync(hydrateUser));
+router.use(requireAuth);
 
 // Create a new album (DRAFT)
 router.post(

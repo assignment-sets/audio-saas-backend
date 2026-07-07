@@ -3,6 +3,7 @@ import { env } from '../../config/env_setup/env';
 import { prisma } from '../../lib/prisma';
 import type { Request, Response, NextFunction } from 'express';
 import { getUserTier } from '../../modules/users/user.service';
+import { apiKeyAuth } from './apiKeyAuth.middleware';
 
 // Underlying JWT verifier from Auth0
 const underlyingJwtCheck = auth({
@@ -13,17 +14,28 @@ const underlyingJwtCheck = auth({
 
 /**
  * Smart optional authentication middleware.
- * If no Authorization header is present, the request proceeds as a guest (req.user remains undefined).
- * If a token is present, it is verified via Auth0. Invalid tokens trigger 401/403.
- * Valid tokens hydrate req.user from the database.
+ * If no Authorization or x-api-key header is present, the request proceeds as a guest (req.user remains undefined).
+ * If valid credentials are provided (either API key or JWT), req.user is hydrated.
  */
 export const optionalAuth = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
-  if (!req.headers.authorization) {
+  const authHeader = req.headers.authorization;
+  const apiKeyHeader = req.headers['x-api-key'];
+
+  // 1. If absolutely no credentials are provided, proceed as a guest
+  if (!authHeader && !apiKeyHeader) {
     return next();
+  }
+
+  // 2. If API Key is present, delegate authentication
+  if (
+    apiKeyHeader ||
+    (authHeader && authHeader.startsWith('Bearer ak_live_'))
+  ) {
+    return apiKeyAuth(req, res, next);
   }
 
   underlyingJwtCheck(req, res, async (err) => {

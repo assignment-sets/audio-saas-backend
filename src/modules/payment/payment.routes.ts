@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import * as paymentController from './payment.controller';
-import { jwtCheck } from '../../middleware/auth/auth0.middleware';
-import { hydrateUser } from '../../middleware/auth/userHydration.middleware';
+import { requireAuth } from '../../middleware/auth/requireAuth.middleware';
 import { catchAsync } from '../../middleware/errorHandling/asyncWrapper';
 
 const router = Router();
@@ -10,8 +9,7 @@ const router = Router();
 router.post('/webhook', catchAsync(paymentController.handleWebhook));
 
 // Protected Routes: Requires user session
-router.use(jwtCheck);
-router.use(catchAsync(hydrateUser));
+router.use(requireAuth);
 
 router.post('/checkout', catchAsync(paymentController.createCheckoutSession));
 router.post('/portal', catchAsync(paymentController.createPortalSession));
