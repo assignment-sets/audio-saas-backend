@@ -37,3 +37,8 @@ This directory contains the architectural, data flow, and API schema documentati
 - [Playlist Lifecycle & Policies](modules/playlist/playlistLifecycle.md) — CRUD operations, maximum playlist caps, and private/public FGA visibility.
 - [Playlist Tracklist Management](modules/playlist/playlistTracklist.md) — Capacity bounds and optimized SQL bulk `CASE` re-sequencing.
 - [Playlist Retrieval & Searches](modules/playlist/playlistRetrieval.md) — Retrieve by ID (with dynamic like hydration) and paginated searches/listings.
+
+### ⚡ Infrastructure & Cross-Cutting Systems
+
+- [API Rate Limiting](infrastructure/rateLimiting.md) — Redis sorted sets sliding-window limiting for API abuse prevention.
+- [Metadata Caching](infrastructure/metadataCaching.md) — Service-level cache structures with dynamic personalization injection.
