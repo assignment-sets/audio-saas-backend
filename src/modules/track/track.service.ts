@@ -17,6 +17,7 @@ import { JobName } from '../../queues/types';
 import { logger } from '../../config/logging_setup/logger';
 import { s3Client, BUCKET_NAME } from '../../lib/s3.client';
 import { engagementRedis } from '../../lib/engagementRedis.client';
+import { cacheRedis } from '../../lib/cacheRedis.client';
 
 export const getTracksByArtist = async (
   artistId: string,
@@ -82,25 +83,53 @@ export const getTrackById = async (
   if (!allowed)
     throw new ForbiddenError('Not authorized to view internal track details');
 
-  const track = await prisma.track.findUnique({
-    where: { id },
-    include: {
-      artist: { select: { artistName: true, id: true } },
-      album: { select: { title: true, id: true } },
-      likes: {
-        where: { userId },
-        select: { userId: true },
+  const cacheKey = `track:metadata:${id}`;
+  let rawTrack: any = null;
+
+  try {
+    const cached = await cacheRedis.get(cacheKey);
+    if (cached) {
+      rawTrack = JSON.parse(cached);
+    }
+  } catch (error) {
+    // Fail silently on cache read error
+  }
+
+  if (!rawTrack) {
+    const track = await prisma.track.findUnique({
+      where: { id },
+      include: {
+        artist: { select: { artistName: true, id: true } },
+        album: { select: { title: true, id: true } },
+      },
+    });
+
+    if (!track || track.state === 'deleted')
+      throw new NotFoundError('Track not found');
+
+    rawTrack = track;
+
+    try {
+      await cacheRedis.set(cacheKey, JSON.stringify(rawTrack), 'EX', 86400); // 24h TTL
+    } catch (error) {
+      // Fail silently on cache write error
+    }
+  }
+
+  // Hydrate likes dynamically at request time
+  const likeRecord = await prisma.trackLike.findUnique({
+    where: {
+      userId_trackId: {
+        userId,
+        trackId: id,
       },
     },
+    select: { userId: true },
   });
 
-  if (!track || track.state === 'deleted')
-    throw new NotFoundError('Track not found');
-
-  const { likes, ...rest } = track;
   return {
-    ...rest,
-    isLiked: likes.length > 0,
+    ...rawTrack,
+    isLiked: !!likeRecord,
   };
 };
 
@@ -155,6 +184,9 @@ export const createTrack = async (
       'Failed to push to transcode queue. Outbox will handle fallback.',
     );
   }
+
+  // Invalidate artist profile cache
+  await invalidateArtistProfileCache(data.artistId);
 
   return track;
 };
@@ -220,10 +252,19 @@ export const updateTrack = async (
 
   if (!allowed) throw new ForbiddenError('Not authorized to edit this track');
 
-  return await prisma.track.update({
+  const updatedTrack = await prisma.track.update({
     where: { id: trackId },
     data,
   });
+
+  try {
+    await cacheRedis.del(`track:metadata:${trackId}`);
+    await invalidateArtistProfileCache(updatedTrack.artistId);
+  } catch (error) {
+    // Fail silently on cache eviction error
+  }
+
+  return updatedTrack;
 };
 
 export const deleteTrack = async (
@@ -239,9 +280,9 @@ export const deleteTrack = async (
   if (!allowed) throw new ForbiddenError('Not authorized to delete this track');
 
   // 1. Transaction: Create Outbox Intent & Update State
-  const { outboxTask } = await prisma.$transaction(async (tx) => {
+  const { outboxTask, track } = await prisma.$transaction(async (tx) => {
     // Hide it from UI immediately
-    await tx.track.update({
+    const updated = await tx.track.update({
       where: { id: trackId },
       data: { state: 'deleted' },
     });
@@ -254,8 +295,15 @@ export const deleteTrack = async (
       },
     });
 
-    return { outboxTask: task };
+    return { outboxTask: task, track: updated };
   });
+
+  try {
+    await cacheRedis.del(`track:metadata:${trackId}`);
+    await invalidateArtistProfileCache(track.artistId);
+  } catch (error) {
+    // Fail silently on cache eviction error
+  }
 
   // 2. TELL BULLMQ TO WAKE UP THE WORKER
   try {
@@ -482,4 +530,18 @@ export const getTracksByArtistDashboard = async (
     nextCursor,
     hasMore,
   };
+};
+
+const invalidateArtistProfileCache = async (artistId: string) => {
+  try {
+    const artist = await prisma.artistProfile.findUnique({
+      where: { id: artistId },
+      select: { artistName: true },
+    });
+    if (artist) {
+      await cacheRedis.del(`artist:profile:${artist.artistName}`);
+    }
+  } catch (error) {
+    // Fail silently on cache eviction error
+  }
 };

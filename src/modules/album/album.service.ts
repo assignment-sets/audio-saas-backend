@@ -1,5 +1,6 @@
 import { prisma } from '../../lib/prisma';
 import { fgaClient } from '../../lib/fga.client';
+import { cacheRedis } from '../../lib/cacheRedis.client';
 import {
   NotFoundError,
   BadRequestError,
@@ -217,6 +218,8 @@ export const updateAlbum = async (
       }
     }
 
+    await invalidateAlbumCache(albumId, updatedAlbum.artistId);
+
     return updatedAlbum;
   });
 };
@@ -285,10 +288,14 @@ export const publishAlbum = async (
     );
   }
 
-  return await prisma.album.update({
+  const published = await prisma.album.update({
     where: { id: albumId },
     data: { status: 'PUBLISHED' },
   });
+
+  await invalidateAlbumCache(albumId, album.artistId);
+
+  return published;
 };
 
 export const deleteAlbum = async (
@@ -342,61 +349,93 @@ export const deleteAlbum = async (
       'FGA tuples already gone or failed to delete on album removal',
     );
   }
+
+  await invalidateAlbumCache(albumId, album.artistId);
 };
 
 export const getAlbumById = async (
   userId: string | null,
   albumId: string,
 ): Promise<any> => {
-  const album = await prisma.album.findUnique({
-    where: { id: albumId },
-    include: {
-      tracks: {
-        orderBy: { trackNumber: 'asc' },
-        include: {
-          likes: userId
-            ? {
-                where: { userId },
-                select: { userId: true },
-              }
-            : undefined,
+  const cacheKey = `album:metadata:${albumId}`;
+  let rawAlbum: any = null;
+
+  try {
+    const cached = await cacheRedis.get(cacheKey);
+    if (cached) {
+      rawAlbum = JSON.parse(cached);
+    }
+  } catch (error) {
+    // Fail silently on cache read error
+  }
+
+  if (!rawAlbum) {
+    const album = await prisma.album.findUnique({
+      where: { id: albumId },
+      include: {
+        tracks: {
+          orderBy: { trackNumber: 'asc' },
         },
       },
-    },
-  });
-
-  if (!album) {
-    throw new NotFoundError('Album not found');
-  }
-
-  // If album is in DRAFT status, only allow the owner/manager to view it
-  if (album.status === 'DRAFT') {
-    if (!userId) {
-      throw new ForbiddenError('Access to draft album is restricted');
-    }
-
-    const { allowed } = await fgaClient.check({
-      user: `user:${userId}`,
-      relation: 'can_edit',
-      object: `album:${albumId}`,
     });
 
-    if (!allowed) {
-      throw new ForbiddenError('Access to draft album is restricted');
+    if (!album) {
+      throw new NotFoundError('Album not found');
+    }
+
+    // If album is in DRAFT status, only allow the owner/manager to view it
+    if (album.status === 'DRAFT') {
+      if (!userId) {
+        throw new ForbiddenError('Access to draft album is restricted');
+      }
+
+      const { allowed } = await fgaClient.check({
+        user: `user:${userId}`,
+        relation: 'can_edit',
+        object: `album:${albumId}`,
+      });
+
+      if (!allowed) {
+        throw new ForbiddenError('Access to draft album is restricted');
+      }
+
+      rawAlbum = album;
+    } else {
+      rawAlbum = album;
+      try {
+        await cacheRedis.set(cacheKey, JSON.stringify(rawAlbum), 'EX', 86400); // 24h TTL
+      } catch (error) {
+        // Fail silently on cache write error
+      }
     }
   }
 
-  const tracks = album.tracks.map((track) => {
-    const { likes, ...rest } = track as any;
-    return {
-      ...rest,
-      isLiked: likes ? likes.length > 0 : false,
-    };
-  });
+  const tracks = rawAlbum.tracks;
+  let tracksWithLikes = [...tracks];
+
+  if (userId && tracks.length > 0) {
+    const trackIds = tracks.map((t: any) => t.id);
+    const likedTrackIds = await prisma.trackLike
+      .findMany({
+        where: { userId, trackId: { in: trackIds } },
+        select: { trackId: true },
+      })
+      .then((likes) => new Set(likes.map((l) => l.trackId)));
+
+    tracksWithLikes = tracks.map((track: any) => ({
+      ...track,
+      isLiked: likedTrackIds.has(track.id),
+    }));
+  } else {
+    tracksWithLikes = tracks.map((track: any) => ({
+      ...track,
+      isLiked: false,
+    }));
+  }
 
   return {
-    ...album,
-    tracks,
+    ...rawAlbum,
+    tracks: tracksWithLikes,
   };
 };
 
@@ -504,5 +543,34 @@ export const getAlbumsByArtist = async (
       nextCursor,
       hasMore,
     };
+  }
+};
+
+const invalidateAlbumCache = async (albumId: string, artistId?: string) => {
+  try {
+    await cacheRedis.del(`album:metadata:${albumId}`);
+
+    let finalArtistId = artistId;
+    if (!finalArtistId) {
+      const album = await prisma.album.findUnique({
+        where: { id: albumId },
+        select: { artistId: true },
+      });
+      if (album) {
+        finalArtistId = album.artistId;
+      }
+    }
+
+    if (finalArtistId) {
+      const artist = await prisma.artistProfile.findUnique({
+        where: { id: finalArtistId },
+        select: { artistName: true },
+      });
+      if (artist) {
+        await cacheRedis.del(`artist:profile:${artist.artistName}`);
+      }
+    }
+  } catch (error) {
+    // Fail silently on cache eviction error
   }
 };

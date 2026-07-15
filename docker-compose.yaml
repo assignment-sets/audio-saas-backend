@@ -32,6 +32,13 @@ services:
     ports:
       - '6381:6379'
 
+  caching-redis:
+    image: redis:7-alpine
+    container_name: audio-saas-caching-redis
+    restart: 'no'
+    ports:
+      - '6382:6379'
+
   engagement-bg-svc:
     container_name: engagement-bg-svc
     image: audiosass-engagement-bg-svc

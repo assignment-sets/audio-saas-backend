@@ -13,6 +13,7 @@ import {
 } from '../../lib/errors';
 import { getUserTier, UserTier } from '../users/user.service';
 import { SUBSCRIPTION_LIMITS } from '../../config/constants/subscriptionLimits';
+import { cacheRedis } from '../../lib/cacheRedis.client';
 import { logger } from '../../config/logging_setup/logger';
 import { fgaClient } from '../../lib/fga.client';
 import { addArtistJob } from '../../lib/queue.client';
@@ -104,63 +105,89 @@ export const getProfileByName = async (
   artistName: string,
   userId?: string,
 ): Promise<ArtistProfileWithRelations> => {
-  const profile = await prisma.artistProfile.findUnique({
-    where: { artistName },
-    include: {
-      user: {
-        select: { isBlocked: true }, // deletedAt is handled by the Prisma extension
-      },
-      albums: {
-        where: {
-          status: 'PUBLISHED',
-        },
-        orderBy: { releaseDate: 'desc' },
-        take: 5,
-      },
-      tracks: {
-        where: {
-          state: 'ready', // Track uses state instead of deletedAt
-        },
-        include: {
-          likes: userId
-            ? {
-                where: { userId },
-                select: { userId: true },
-              }
-            : undefined,
-        },
-        orderBy: [{ playCount: 'desc' }, { likeCount: 'desc' }],
-        take: 5,
-      },
-      _count: {
-        select: {
-          followers: true,
-          tracks: {
-            where: { state: 'ready' }, // Only count ready tracks
-          },
-          albums: {
-            where: { status: 'PUBLISHED' },
-          },
-        },
-      },
-    },
-  });
+  const cacheKey = `artist:profile:${artistName}`;
+  let rawProfile: any = null;
 
-  // If the user is soft-deleted or blocked, treat as not found
-  if (!profile || !profile.user || profile.user.isBlocked) {
-    throw new NotFoundError('Artist not found');
+  try {
+    const cached = await cacheRedis.get(cacheKey);
+    if (cached) {
+      rawProfile = JSON.parse(cached);
+    }
+  } catch (error) {
+    // Fail silently on cache read error
   }
 
-  const tracks = profile.tracks.map((track) => {
-    const { likes, ...rest } = track;
-    return {
-      ...rest,
-      isLiked: likes ? likes.length > 0 : false,
-    } as Track & { isLiked: boolean };
-  });
+  if (!rawProfile) {
+    const profile = await prisma.artistProfile.findUnique({
+      where: { artistName },
+      include: {
+        user: {
+          select: { isBlocked: true },
+        },
+        albums: {
+          where: {
+            status: 'PUBLISHED',
+          },
+          orderBy: { releaseDate: 'desc' },
+          take: 5,
+        },
+        tracks: {
+          where: {
+            state: 'ready',
+          },
+          orderBy: [{ playCount: 'desc' }, { likeCount: 'desc' }],
+          take: 5,
+        },
+        _count: {
+          select: {
+            followers: true,
+            tracks: {
+              where: { state: 'ready' },
+            },
+            albums: {
+              where: { status: 'PUBLISHED' },
+            },
+          },
+        },
+      },
+    });
+
+    if (!profile || !profile.user || profile.user.isBlocked) {
+      throw new NotFoundError('Artist not found');
+    }
+
+    rawProfile = profile;
+
+    try {
+      await cacheRedis.set(cacheKey, JSON.stringify(rawProfile), 'EX', 86400); // 24h TTL
+    } catch (error) {
+      // Fail silently on cache write error
+    }
+  }
+
+  let tracks = [...rawProfile.tracks];
+  if (userId && tracks.length > 0) {
+    const trackIds = tracks.map((t) => t.id);
+    const likedTrackIds = await prisma.trackLike
+      .findMany({
+        where: { userId, trackId: { in: trackIds } },
+        select: { trackId: true },
+      })
+      .then((likes) => new Set(likes.map((l) => l.trackId)));
+
+    tracks = tracks.map((t) => ({
+      ...t,
+      isLiked: likedTrackIds.has(t.id),
+    }));
+  } else {
+    tracks = tracks.map((t) => ({
+      ...t,
+      isLiked: false,
+    }));
+  }
 
   return {
-    ...profile,
+    ...rawProfile,
     tracks,
   };
 };
@@ -222,10 +249,18 @@ export const updateProfile = async (
   }
 
   try {
-    return await prisma.artistProfile.update({
+    const updated = await prisma.artistProfile.update({
       where: { id: profileId },
       data,
     });
+
+    try {
+      await cacheRedis.del(`artist:profile:${updated.artistName}`);
+    } catch (error) {
+      // Fail silently on cache eviction error
+    }
+
+    return updated;
   } catch (error: unknown) {
     handlePrismaError(error, 'update artist profile', {
       requesterId,

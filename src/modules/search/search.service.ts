@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma';
+import { cacheRedis } from '../../lib/cacheRedis.client';
 
 export interface SearchResults {
   artists: any[];
@@ -14,24 +15,38 @@ export const searchAll = async (
   const cleanQuery = query.trim();
   const isShortQuery = cleanQuery.length < 3;
 
-  let artists: any[] = [];
-  let tracks: any[] = [];
-  let albums: any[] = [];
-  let playlists: any[] = [];
+  const cacheKey = `search:raw:${cleanQuery}`;
+  let rawResults: SearchResults | null = null;
 
-  if (isShortQuery) {
-    const ilikePattern = `%${cleanQuery}%`;
+  try {
+    const cached = await cacheRedis.get(cacheKey);
+    if (cached) {
+      rawResults = JSON.parse(cached);
+    }
+  } catch (error) {
+    // Fail silently on cache read error
+  }
 
-    // 1. Parallel ILIKE queries with deterministic sorting (position and string length)
-    const [artistsRes, tracksRes, albumsRes, playlistsRes] = await Promise.all([
-      prisma.$queryRaw<any[]>`
+  if (!rawResults) {
+    let artists: any[] = [];
+    let tracks: any[] = [];
+    let albums: any[] = [];
+    let playlists: any[] = [];
+
+    if (isShortQuery) {
+      const ilikePattern = `%${cleanQuery}%`;
+
+      // 1. Parallel ILIKE queries with deterministic sorting (position and string length)
+      const [artistsRes, tracksRes, albumsRes, playlistsRes] =
+        await Promise.all([
+          prisma.$queryRaw<any[]>`
         SELECT id, artist_name AS "artistName", bio, verified, created_at AS "createdAt"
         FROM artist_profiles
         WHERE artist_name ILIKE ${ilikePattern}
         ORDER BY position(lower(${cleanQuery}) in lower(artist_name)) ASC, length(artist_name) ASC, verified DESC
         LIMIT 5;
       `,
-      prisma.$queryRaw<any[]>`
+          prisma.$queryRaw<any[]>`
         SELECT t.id, t.artist_id AS "artistId", t.album_id AS "albumId", t.title, t.duration_seconds AS "durationSeconds", t.audio_url AS "audioUrl", t.state, t.created_at AS "createdAt", t.play_count AS "playCount", t.like_count AS "likeCount",
                ap.artist_name AS "artistName"
         FROM tracks t
@@ -40,7 +55,7 @@ export const searchAll = async (
         ORDER BY position(lower(${cleanQuery}) in lower(t.title)) ASC, length(t.title) ASC, t.play_count DESC, t.like_count DESC
         LIMIT 5;
       `,
-      prisma.$queryRaw<any[]>`
+          prisma.$queryRaw<any[]>`
         SELECT a.id, a.artist_id AS "artistId", a.title, a.cover_art_url AS "coverArtUrl", a.release_date AS "releaseDate", a.status, a.created_at AS "createdAt",
                ap.artist_name AS "artistName"
         FROM albums a
@@ -49,7 +64,7 @@ export const searchAll = async (
         ORDER BY position(lower(${cleanQuery}) in lower(a.title)) ASC, length(a.title) ASC, a.release_date DESC, a.created_at DESC
         LIMIT 5;
       `,
-      prisma.$queryRaw<any[]>`
+          prisma.$queryRaw<any[]>`
         SELECT p.id, p.user_id AS "userId", p.name, p.thumbnail_url AS "thumbnailUrl", p.is_public AS "isPublic", p.created_at AS "createdAt",
                u.display_name AS "creatorName"
         FROM playlists p
@@ -58,16 +73,17 @@ export const searchAll = async (
         ORDER BY position(lower(${cleanQuery}) in lower(p.name)) ASC, length(p.name) ASC, p.created_at DESC
         LIMIT 5;
       `,
-    ]);
+        ]);
 
-    artists = artistsRes;
-    tracks = tracksRes;
-    albums = albumsRes;
-    playlists = playlistsRes;
-  } else {
-    // 2. Parallel trigram similarity queries with ranking and popularity tie-breakers
-    const [artistsRes, tracksRes, albumsRes, playlistsRes] = await Promise.all([
-      prisma.$queryRaw<any[]>`
+      artists = artistsRes;
+      tracks = tracksRes;
+      albums = albumsRes;
+      playlists = playlistsRes;
+    } else {
+      // 2. Parallel trigram similarity queries with ranking and popularity tie-breakers
+      const [artistsRes, tracksRes, albumsRes, playlistsRes] =
+        await Promise.all([
+          prisma.$queryRaw<any[]>`
         SELECT id, artist_name AS "artistName", bio, verified, created_at AS "createdAt",
                similarity(artist_name, ${cleanQuery}) AS similarity
         FROM artist_profiles
@@ -75,7 +91,7 @@ export const searchAll = async (
         ORDER BY similarity DESC, verified DESC, created_at DESC
         LIMIT 5;
       `,
-      prisma.$queryRaw<any[]>`
+          prisma.$queryRaw<any[]>`
         SELECT t.id, t.artist_id AS "artistId", t.album_id AS "albumId", t.title, t.duration_seconds AS "durationSeconds", t.audio_url AS "audioUrl", t.state, t.created_at AS "createdAt", t.play_count AS "playCount", t.like_count AS "likeCount",
                ap.artist_name AS "artistName",
                similarity(t.title, ${cleanQuery}) AS similarity
@@ -85,7 +101,7 @@ export const searchAll = async (
         ORDER BY similarity DESC, t.play_count DESC, t.like_count DESC
         LIMIT 5;
       `,
-      prisma.$queryRaw<any[]>`
+          prisma.$queryRaw<any[]>`
         SELECT a.id, a.artist_id AS "artistId", a.title, a.cover_art_url AS "coverArtUrl", a.release_date AS "releaseDate", a.status, a.created_at AS "createdAt",
                ap.artist_name AS "artistName",
                similarity(a.title, ${cleanQuery}) AS similarity
@@ -95,7 +111,7 @@ export const searchAll = async (
         ORDER BY similarity DESC, a.release_date DESC, a.created_at DESC
         LIMIT 5;
       `,
-      prisma.$queryRaw<any[]>`
+          prisma.$queryRaw<any[]>`
         SELECT p.id, p.user_id AS "userId", p.name, p.thumbnail_url AS "thumbnailUrl", p.is_public AS "isPublic", p.created_at AS "createdAt",
                u.display_name AS "creatorName",
                similarity(p.name, ${cleanQuery}) AS similarity
@@ -105,13 +121,29 @@ export const searchAll = async (
         ORDER BY similarity DESC, p.created_at DESC
         LIMIT 5;
       `,
-    ]);
+        ]);
 
-    artists = artistsRes;
-    tracks = tracksRes;
-    albums = albumsRes;
-    playlists = playlistsRes;
+      artists = artistsRes;
+      tracks = tracksRes;
+      albums = albumsRes;
+      playlists = playlistsRes;
+    }
+
+    rawResults = {
+      artists,
+      tracks,
+      albums,
+      playlists,
+    };
+
+    try {
+      await cacheRedis.set(cacheKey, JSON.stringify(rawResults), 'EX', 300); // 5 min TTL
+    } catch (error) {
+      // Fail silently on cache write error
+    }
   }
+
+  let tracks = [...rawResults.tracks];
 
   // 3. Hydrate isLiked for tracks if user is authenticated
   if (userId && tracks.length > 0) {
@@ -135,9 +167,9 @@ export const searchAll = async (
   }
 
   return {
-    artists,
+    artists: rawResults.artists,
     tracks,
-    albums,
-    playlists,
+    albums: rawResults.albums,
+    playlists: rawResults.playlists,
   };
 };
