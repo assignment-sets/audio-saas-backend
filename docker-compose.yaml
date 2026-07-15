@@ -25,6 +25,13 @@ services:
     ports:
       - '6380:6379'
 
+  rate-limit-redis:
+    image: redis:7-alpine
+    container_name: audio-saas-ratelimit-redis
+    restart: 'no'
+    ports:
+      - '6381:6379'
+
   engagement-bg-svc:
     container_name: engagement-bg-svc
     image: audiosass-engagement-bg-svc

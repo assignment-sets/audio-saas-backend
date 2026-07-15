@@ -30,6 +30,8 @@ export const envSchema = z.object({
   REDIS_PORT: z.coerce.number().int().positive(),
   ENGAGEMENT_REDIS_HOST: z.string(),
   ENGAGEMENT_REDIS_PORT: z.coerce.number().int().positive(),
+  RATE_LIMIT_REDIS_HOST: z.string(),
+  RATE_LIMIT_REDIS_PORT: z.coerce.number().int().positive(),
 
   // AWS / S3
   AWS_REGION: z.string(),

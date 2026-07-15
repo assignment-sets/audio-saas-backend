@@ -10,6 +10,13 @@ import {
   createApiKeySchema,
   deleteApiKeySchema,
 } from './user.schema';
+import { createRateLimiter } from '../../middleware/rateLimit/rateLimiter.middleware';
+
+const keyGenRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10,
+  keyPrefix: 'keygen',
+});
 
 const router = Router();
 
@@ -50,6 +57,7 @@ router.delete('/', catchAsync(userController.deleteUser));
  */
 router.post(
   '/keys',
+  catchAsync(keyGenRateLimiter),
   validate(createApiKeySchema),
   catchAsync(userController.createApiKey),
 );

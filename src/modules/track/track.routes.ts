@@ -16,6 +16,19 @@ import {
   getTracksByArtistQuerySchema,
   getTracksDashboardQuerySchema,
 } from './track.schema';
+import { createRateLimiter } from '../../middleware/rateLimit/rateLimiter.middleware';
+
+const uploadUrlRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10,
+  keyPrefix: 'upload-url',
+});
+
+const playRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  max: 30,
+  keyPrefix: 'play',
+});
 
 const router = Router();
 
@@ -50,6 +63,7 @@ router.post(
   validate(trackIdParamSchema, 'params'),
   validate(trackPlaySchema, 'body'),
   catchAsync(optionalAuth),
+  catchAsync(playRateLimiter),
   catchAsync(trackController.recordPlay),
 );
 
@@ -108,6 +122,7 @@ router.delete(
 
 router.post(
   '/upload-url',
+  catchAsync(uploadUrlRateLimiter),
   validate(generateUploadUrlSchema, 'body'),
   catchAsync(trackController.generateUploadUrl),
 );
