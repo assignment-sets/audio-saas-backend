@@ -47,3 +47,6 @@ Thumbs.db
 
 # Special scrap files
 planning/
+
+# Test coverage artifacts
+coverage/

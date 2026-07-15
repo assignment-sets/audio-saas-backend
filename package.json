@@ -15,7 +15,10 @@
     "gen": "npx prisma generate",
     "prepare": "husky",
     "format": "prettier --write .",
-    "lint-commits": "commitlint --from=HEAD~1"
+    "lint-commits": "commitlint --from=HEAD~1",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "lint-staged": {
     "*.{js,ts,jsx,tsx,json,yaml,yml,md}": "prettier --write"
@@ -50,12 +53,16 @@
     "@types/express": "^5.0.6",
     "@types/node": "^25.0.10",
     "@types/pg": "^8.16.0",
+    "@types/supertest": "^7.2.1",
+    "@vitest/coverage-v8": "^4.1.10",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "prettier": "^3.8.1",
     "prisma": "^7.3.0",
+    "supertest": "^7.2.2",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
   },
   "overrides": {
     "fast-xml-parser": "^5.3.8",
