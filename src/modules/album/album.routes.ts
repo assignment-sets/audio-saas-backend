@@ -1,3 +1,4 @@
+import './album.openapi';
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth/requireAuth.middleware';
 import { optionalAuth } from '../../middleware/auth/optionalAuth.middleware';

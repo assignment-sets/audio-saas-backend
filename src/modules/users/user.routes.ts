@@ -1,3 +1,4 @@
+import './user.openapi';
 import { Router } from 'express';
 import { internalSyncAuth } from '../../middleware/auth/internalAuth.middleware';
 import { requireAuth } from '../../middleware/auth/requireAuth.middleware';
