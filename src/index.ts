@@ -9,7 +9,9 @@ const PORT = env.PORT || 5000;
 
 app.listen(PORT, () => {
   logger.info(`🚀 AudioSaaS Backend running on http://localhost:${PORT}`);
-  logger.info(`Sync Endpoint: http://localhost:${PORT}/api/user/sync/internal`);
+  logger.info(
+    `Sync Endpoint: http://localhost:${PORT}/api/v1/user/sync/internal`,
+  );
 });
 
 initUserWorker();

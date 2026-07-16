@@ -68,10 +68,10 @@ describe('AlbumController Integration Tests', () => {
     vi.clearAllMocks();
   });
 
-  describe('POST /api/album', () => {
+  describe('POST /api/v1/album', () => {
     it('should fail validation (400) if artistId is not a UUID', async () => {
       const response = await request(app)
-        .post('/api/album')
+        .post('/api/v1/album')
         .send({ artistId: 'not-a-uuid', title: 'Test Album' });
 
       expect(response.status).toBe(400);
@@ -90,7 +90,7 @@ describe('AlbumController Integration Tests', () => {
       );
 
       const response = await request(app)
-        .post('/api/album')
+        .post('/api/v1/album')
         .send({ artistId: uuid, title: 'Test Album' });
 
       expect(response.status).toBe(201);
@@ -102,10 +102,10 @@ describe('AlbumController Integration Tests', () => {
     });
   });
 
-  describe('PATCH /api/album/:id', () => {
+  describe('PATCH /api/v1/album/:id', () => {
     it('should fail validation if ID is not a UUID', async () => {
       const response = await request(app)
-        .patch('/api/album/not-a-uuid')
+        .patch('/api/v1/album/not-a-uuid')
         .send({ title: 'New Title' });
 
       expect(response.status).toBe(400);
@@ -119,7 +119,7 @@ describe('AlbumController Integration Tests', () => {
       );
 
       const response = await request(app)
-        .patch(`/api/album/${uuid}`)
+        .patch(`/api/v1/album/${uuid}`)
         .send({ title: 'New Title' });
 
       expect(response.status).toBe(200);
@@ -134,7 +134,7 @@ describe('AlbumController Integration Tests', () => {
     });
   });
 
-  describe('POST /api/album/:id/publish', () => {
+  describe('POST /api/v1/album/:id/publish', () => {
     it('should publish album successfully', async () => {
       const uuid = '123e4567-e89b-12d3-a456-426614174000';
       const mockAlbum = { id: uuid, title: 'Test Album', status: 'PUBLISHED' };
@@ -142,7 +142,7 @@ describe('AlbumController Integration Tests', () => {
         mockAlbum as any,
       );
 
-      const response = await request(app).post(`/api/album/${uuid}/publish`);
+      const response = await request(app).post(`/api/v1/album/${uuid}/publish`);
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual(mockAlbum);
@@ -153,12 +153,12 @@ describe('AlbumController Integration Tests', () => {
     });
   });
 
-  describe('DELETE /api/album/:id', () => {
+  describe('DELETE /api/v1/album/:id', () => {
     it('should delete album successfully (204)', async () => {
       const uuid = '123e4567-e89b-12d3-a456-426614174000';
       vi.mocked(albumService.deleteAlbum).mockResolvedValueOnce();
 
-      const response = await request(app).delete(`/api/album/${uuid}`);
+      const response = await request(app).delete(`/api/v1/album/${uuid}`);
 
       expect(response.status).toBe(204);
       expect(albumService.deleteAlbum).toHaveBeenCalledWith(
@@ -168,7 +168,7 @@ describe('AlbumController Integration Tests', () => {
     });
   });
 
-  describe('GET /api/album/:id', () => {
+  describe('GET /api/v1/album/:id', () => {
     it('should get album details successfully', async () => {
       const uuid = '123e4567-e89b-12d3-a456-426614174000';
       const mockAlbum = { id: uuid, title: 'Test Album', status: 'PUBLISHED' };
@@ -176,7 +176,7 @@ describe('AlbumController Integration Tests', () => {
         mockAlbum as any,
       );
 
-      const response = await request(app).get(`/api/album/${uuid}`);
+      const response = await request(app).get(`/api/v1/album/${uuid}`);
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual(mockAlbum);
@@ -187,7 +187,7 @@ describe('AlbumController Integration Tests', () => {
     });
   });
 
-  describe('GET /api/album/artist/:artistId', () => {
+  describe('GET /api/v1/album/artist/:artistId', () => {
     it('should return list of albums for an artist', async () => {
       const uuid = '123e4567-e89b-12d3-a456-426614174000';
       const mockResult = { albums: [], nextCursor: null, hasMore: false };
@@ -196,7 +196,7 @@ describe('AlbumController Integration Tests', () => {
       );
 
       const response = await request(app)
-        .get(`/api/album/artist/${uuid}`)
+        .get(`/api/v1/album/artist/${uuid}`)
         .query({ limit: '10' });
 
       expect(response.status).toBe(200);

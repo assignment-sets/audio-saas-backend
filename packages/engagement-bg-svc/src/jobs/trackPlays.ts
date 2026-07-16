@@ -37,7 +37,7 @@ export async function processTrackPlays(): Promise<void> {
 
     // 3. Post to the webhook using global fetch
     const response = await fetch(
-      `${WEBHOOK_URL}/api/track/webhook/batch-plays`,
+      `${WEBHOOK_URL}/api/v1/track/webhook/batch-plays`,
       {
         method: 'POST',
         headers: {

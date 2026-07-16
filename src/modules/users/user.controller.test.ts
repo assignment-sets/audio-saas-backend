@@ -75,10 +75,10 @@ describe('UserController Integration Tests', () => {
     vi.clearAllMocks();
   });
 
-  describe('POST /api/user/sync/internal', () => {
+  describe('POST /api/v1/user/sync/internal', () => {
     it('should reject requests with missing sync secret header', async () => {
       const response = await request(app)
-        .post('/api/user/sync/internal')
+        .post('/api/v1/user/sync/internal')
         .send({ id: 'auth0|123', email: 'sync@example.com' });
 
       expect(response.status).toBe(401);
@@ -87,7 +87,7 @@ describe('UserController Integration Tests', () => {
 
     it('should reject requests with invalid sync secret header', async () => {
       const response = await request(app)
-        .post('/api/user/sync/internal')
+        .post('/api/v1/user/sync/internal')
         .set('x-sync-secret', 'wrong-secret')
         .send({ id: 'auth0|123', email: 'sync@example.com' });
 
@@ -97,7 +97,7 @@ describe('UserController Integration Tests', () => {
 
     it('should reject sync user if validation schema constraints fail', async () => {
       const response = await request(app)
-        .post('/api/user/sync/internal')
+        .post('/api/v1/user/sync/internal')
         .set('x-sync-secret', 'test-sync-secret')
         .send({ id: '', email: 'not-an-email' }); // Invalid fields
 
@@ -116,7 +116,7 @@ describe('UserController Integration Tests', () => {
       );
 
       const response = await request(app)
-        .post('/api/user/sync/internal')
+        .post('/api/v1/user/sync/internal')
         .set('x-sync-secret', 'test-sync-secret')
         .send({ id: 'auth0|123', email: 'sync@example.com' });
 
@@ -130,10 +130,10 @@ describe('UserController Integration Tests', () => {
     });
   });
 
-  describe('GET /api/user', () => {
+  describe('GET /api/v1/user', () => {
     it('should return 401 if request is unauthenticated', async () => {
       const response = await request(app)
-        .get('/api/user')
+        .get('/api/v1/user')
         .set('x-test-unauthenticated', 'true');
 
       expect(response.status).toBe(401);
@@ -150,7 +150,7 @@ describe('UserController Integration Tests', () => {
         mockPlaylists as any,
       );
 
-      const response = await request(app).get('/api/user');
+      const response = await request(app).get('/api/v1/user');
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual({
@@ -163,10 +163,10 @@ describe('UserController Integration Tests', () => {
     });
   });
 
-  describe('PATCH /api/user', () => {
+  describe('PATCH /api/v1/user', () => {
     it('should fail validation (400) if update payload is invalid', async () => {
       const response = await request(app)
-        .patch('/api/user')
+        .patch('/api/v1/user')
         .send({ email: 'not-an-email' });
 
       expect(response.status).toBe(400);
@@ -183,7 +183,7 @@ describe('UserController Integration Tests', () => {
       );
 
       const response = await request(app)
-        .patch('/api/user')
+        .patch('/api/v1/user')
         .send({ email: 'new@example.com', displayName: 'New Name' });
 
       expect(response.status).toBe(200);
@@ -195,20 +195,20 @@ describe('UserController Integration Tests', () => {
     });
   });
 
-  describe('DELETE /api/user', () => {
+  describe('DELETE /api/v1/user', () => {
     it('should soft-delete user and return 204', async () => {
       vi.mocked(userService.deleteUser).mockResolvedValueOnce();
 
-      const response = await request(app).delete('/api/user');
+      const response = await request(app).delete('/api/v1/user');
 
       expect(response.status).toBe(204);
       expect(userService.deleteUser).toHaveBeenCalledWith('test-user-id');
     });
   });
 
-  describe('POST /api/user/keys', () => {
+  describe('POST /api/v1/user/keys', () => {
     it('should fail with 400 if api key name is missing', async () => {
-      const response = await request(app).post('/api/user/keys').send({});
+      const response = await request(app).post('/api/v1/user/keys').send({});
 
       expect(response.status).toBe(400);
     });
@@ -225,7 +225,7 @@ describe('UserController Integration Tests', () => {
       );
 
       const response = await request(app)
-        .post('/api/user/keys')
+        .post('/api/v1/user/keys')
         .send({ name: 'prod' });
 
       expect(response.status).toBe(201);
@@ -237,7 +237,7 @@ describe('UserController Integration Tests', () => {
     });
   });
 
-  describe('GET /api/user/keys', () => {
+  describe('GET /api/v1/user/keys', () => {
     it('should return list of user API keys', async () => {
       const mockKeysList = [
         { id: 'key_1', name: 'prod', createdAt: new Date().toISOString() },
@@ -246,7 +246,7 @@ describe('UserController Integration Tests', () => {
         mockKeysList as any,
       );
 
-      const response = await request(app).get('/api/user/keys');
+      const response = await request(app).get('/api/v1/user/keys');
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual(mockKeysList);
@@ -254,9 +254,11 @@ describe('UserController Integration Tests', () => {
     });
   });
 
-  describe('DELETE /api/user/keys/:id', () => {
+  describe('DELETE /api/v1/user/keys/:id', () => {
     it('should fail validation (400) if ID is not a valid UUID', async () => {
-      const response = await request(app).delete('/api/user/keys/not-a-uuid');
+      const response = await request(app).delete(
+        '/api/v1/user/keys/not-a-uuid',
+      );
 
       expect(response.status).toBe(400);
     });
@@ -265,7 +267,9 @@ describe('UserController Integration Tests', () => {
       const validUuid = '123e4567-e89b-12d3-a456-426614174000';
       vi.mocked(userService.deleteApiKey).mockResolvedValueOnce();
 
-      const response = await request(app).delete(`/api/user/keys/${validUuid}`);
+      const response = await request(app).delete(
+        `/api/v1/user/keys/${validUuid}`,
+      );
 
       expect(response.status).toBe(204);
       expect(userService.deleteApiKey).toHaveBeenCalledWith(

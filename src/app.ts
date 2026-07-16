@@ -15,7 +15,7 @@ const app = express();
 
 // Middleware
 app.use(cors());
-app.use('/api/payment/webhook', express.raw({ type: 'application/json' }));
+app.use('/api/v1/payment/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 
 // Basic Request Logger Middleware
@@ -28,13 +28,13 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 // Routes
-app.use('/api/user', userRouter);
-app.use('/api/artist', artistRouter);
-app.use('/api/track', trackRouter);
-app.use('/api/album', albumRouter);
-app.use('/api/playlist', playlistRouter);
-app.use('/api/payment', paymentRouter);
-app.use('/api/search', searchRouter);
+app.use('/api/v1/user', userRouter);
+app.use('/api/v1/artist', artistRouter);
+app.use('/api/v1/track', trackRouter);
+app.use('/api/v1/album', albumRouter);
+app.use('/api/v1/playlist', playlistRouter);
+app.use('/api/v1/payment', paymentRouter);
+app.use('/api/v1/search', searchRouter);
 
 // Health check
 app.get('/health', (req: Request, res: Response) => {
