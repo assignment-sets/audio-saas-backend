@@ -16,6 +16,16 @@ export const errorHandler = (
   if (err instanceof AppError) {
     statusCode = err.statusCode;
     message = err.message;
+  } else if (
+    err.name === 'UnauthorizedError' ||
+    'statusCode' in err ||
+    'status' in err
+  ) {
+    statusCode = (err as any).statusCode || (err as any).status || 401;
+    message = err.message || 'Unauthorized';
+    if ('headers' in err && typeof (err as any).headers === 'object') {
+      res.set((err as any).headers);
+    }
   } else {
     // This is an unhandled error (e.g., a library crashed or DB connection failed)
     logger.error({ err }, 'Unhandled Exception');
