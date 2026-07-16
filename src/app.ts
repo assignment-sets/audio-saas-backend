@@ -1,3 +1,4 @@
+import './config/openapi/zodSetup';
 import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
@@ -10,6 +11,8 @@ import paymentRouter from './modules/payment/payment.routes';
 import searchRouter from './modules/search/search.routes';
 import { logger } from './config/logging_setup/logger';
 import { errorHandler } from './middleware/errorHandling/errorHandler';
+import swaggerUi from 'swagger-ui-express';
+import { getOpenApiDocument } from './config/openapi/openapiGenerator';
 
 const app = express();
 
@@ -26,6 +29,21 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   );
   next();
 });
+
+// Swagger Documentation
+app.get('/openapi.json', (req: Request, res: Response) => {
+  res.json(getOpenApiDocument());
+});
+
+app.use(
+  '/api-docs',
+  swaggerUi.serve,
+  swaggerUi.setup(null, {
+    swaggerOptions: {
+      url: '/openapi.json',
+    },
+  }),
+);
 
 // Routes
 app.use('/api/v1/user', userRouter);
