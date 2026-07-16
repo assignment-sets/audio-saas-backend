@@ -1,3 +1,4 @@
+import './payment.openapi';
 import { Router } from 'express';
 import * as paymentController from './payment.controller';
 import { requireAuth } from '../../middleware/auth/requireAuth.middleware';

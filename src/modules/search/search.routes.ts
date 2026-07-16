@@ -1,3 +1,4 @@
+import './search.openapi';
 import { Router } from 'express';
 import * as searchController from './search.controller';
 import { searchQuerySchema } from './search.schema';
