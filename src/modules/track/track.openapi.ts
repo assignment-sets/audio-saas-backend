@@ -455,11 +455,9 @@ registry.registerPath({
               .string()
               .url()
               .openapi({ description: 'S3 presigned upload URL' }),
-            key: z
-              .string()
-              .openapi({
-                description: 'Generated storage destination file key',
-              }),
+            key: z.string().openapi({
+              description: 'Generated storage destination file key',
+            }),
           }),
         },
       },

@@ -124,12 +124,9 @@ registry.registerPath({
         .uuid()
         .optional()
         .openapi({ description: 'Pagination cursor (Playlist ID)' }),
-      limit: z
-        .string()
-        .optional()
-        .openapi({
-          description: 'Number of playlists to retrieve (default: 10)',
-        }),
+      limit: z.string().optional().openapi({
+        description: 'Number of playlists to retrieve (default: 10)',
+      }),
     }),
   },
   responses: {
@@ -163,12 +160,9 @@ registry.registerPath({
         .uuid()
         .optional()
         .openapi({ description: 'Pagination cursor (Playlist ID)' }),
-      limit: z
-        .string()
-        .optional()
-        .openapi({
-          description: 'Number of playlists to retrieve (default: 10)',
-        }),
+      limit: z.string().optional().openapi({
+        description: 'Number of playlists to retrieve (default: 10)',
+      }),
     }),
   },
   responses: {

@@ -130,12 +130,9 @@ registry.registerPath({
       id: z.string().uuid().openapi({ description: 'Artist UUID ID' }),
     }),
     query: z.object({
-      limit: z
-        .string()
-        .optional()
-        .openapi({
-          description: 'Number of followers to retrieve (default: 20)',
-        }),
+      limit: z.string().optional().openapi({
+        description: 'Number of followers to retrieve (default: 20)',
+      }),
       cursor: z
         .string()
         .optional()
