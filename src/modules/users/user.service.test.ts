@@ -12,50 +12,6 @@ import {
 } from '../../lib/errors';
 import { JobName } from '../../queues/types';
 
-vi.mock('../../lib/prisma', () => ({
-  prisma: {
-    user: {
-      upsert: vi.fn(),
-      findFirst: vi.fn(),
-      findUnique: vi.fn(),
-      update: vi.fn(),
-    },
-    apiKey: {
-      create: vi.fn(),
-      findMany: vi.fn(),
-      findUnique: vi.fn(),
-      delete: vi.fn(),
-    },
-  },
-}));
-
-vi.mock('../../lib/auth0.client', () => ({
-  management: {
-    users: {
-      update: vi.fn().mockResolvedValue({}),
-    },
-  },
-}));
-
-vi.mock('../../lib/queue.client', () => ({
-  addUserJob: vi.fn(),
-}));
-
-vi.mock('../../config/logging_setup/logger', () => ({
-  logger: {
-    error: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-  },
-}));
-
-vi.mock('../../config/env_setup/env', () => ({
-  env: {
-    STRIPE_PRO_PRICE_ID: 'price_pro',
-    STRIPE_LITE_PRICE_ID: 'price_lite',
-  },
-}));
-
 describe('UserService Unit Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();

@@ -9,54 +9,6 @@ import {
   BadRequestError,
 } from '../../lib/errors';
 
-vi.mock('../../lib/prisma', () => {
-  const mockPrisma = {
-    album: {
-      create: vi.fn(),
-      findUnique: vi.fn(),
-      update: vi.fn(),
-      delete: vi.fn(),
-      findMany: vi.fn(),
-    },
-    track: {
-      findMany: vi.fn(),
-      updateMany: vi.fn(),
-      update: vi.fn(),
-    },
-    trackLike: {
-      findMany: vi.fn(),
-    },
-    artistProfile: {
-      findUnique: vi.fn(),
-    },
-    $transaction: vi.fn((callback) => callback(mockPrisma)),
-  };
-  return { prisma: mockPrisma };
-});
-
-vi.mock('../../lib/fga.client', () => ({
-  fgaClient: {
-    check: vi.fn(),
-    write: vi.fn(),
-  },
-}));
-
-vi.mock('../../lib/cacheRedis.client', () => ({
-  cacheRedis: {
-    get: vi.fn(),
-    set: vi.fn(),
-    del: vi.fn(),
-  },
-}));
-
-vi.mock('../../config/logging_setup/logger', () => ({
-  logger: {
-    error: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-  },
-}));
-
 describe('AlbumService Unit Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();

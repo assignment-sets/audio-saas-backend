@@ -1,16 +1,7 @@
-import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import app from '../../app';
 import * as albumService from './album.service';
-import { logger } from '../../config/logging_setup/logger';
-
-beforeAll(() => {
-  logger.level = 'silent';
-});
-
-vi.mock('../../middleware/rateLimit/rateLimiter.middleware', () => ({
-  createRateLimiter: () => async (req: any, res: any, next: any) => next(),
-}));
 
 vi.mock('./album.service', () => ({
   createAlbum: vi.fn(),
@@ -19,48 +10,6 @@ vi.mock('./album.service', () => ({
   deleteAlbum: vi.fn(),
   getAlbumById: vi.fn(),
   getAlbumsByArtist: vi.fn(),
-}));
-
-vi.mock('../../config/env_setup/env', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('../../config/env_setup/env')>();
-  return {
-    env: {
-      ...actual.env,
-      AUTH0_AUDIENCE: 'https://test.audiosass.com',
-      AUTH0_DOMAIN: 'dev-eu86qy2rzdy3nf6d.us.auth0.com',
-      AUTH0_TOKEN_SIGNING_ALGO: 'RS256',
-    },
-  };
-});
-
-vi.mock('../../middleware/auth/requireAuth.middleware', () => ({
-  requireAuth: (req: any, res: any, next: any) => {
-    if (req.headers['x-test-unauthenticated'] === 'true') {
-      return res.status(401).json({ success: false, error: 'Unauthorized' });
-    }
-    req.user = {
-      id: 'test-user-id',
-      email: 'test@example.com',
-      displayName: 'Test User',
-    };
-    next();
-  },
-}));
-
-vi.mock('../../middleware/auth/optionalAuth.middleware', () => ({
-  optionalAuth: async (req: any, res: any, next: any) => {
-    if (req.headers['x-test-unauthenticated'] === 'true') {
-      req.user = undefined;
-    } else {
-      req.user = {
-        id: 'test-user-id',
-        email: 'test@example.com',
-        displayName: 'Test User',
-      };
-    }
-    next();
-  },
 }));
 
 describe('AlbumController Integration Tests', () => {

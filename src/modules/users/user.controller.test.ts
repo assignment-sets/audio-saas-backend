@@ -1,17 +1,8 @@
-import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import app from '../../app';
 import * as userService from './user.service';
 import { prisma } from '../../lib/prisma';
-import { logger } from '../../config/logging_setup/logger';
-
-beforeAll(() => {
-  logger.level = 'silent';
-});
-
-vi.mock('../../middleware/rateLimit/rateLimiter.middleware', () => ({
-  createRateLimiter: () => async (req: any, res: any, next: any) => next(),
-}));
 
 vi.mock('./user.service', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./user.service')>();
@@ -25,50 +16,6 @@ vi.mock('./user.service', async (importOriginal) => {
     deleteApiKey: vi.fn(),
   };
 });
-
-vi.mock('../../lib/prisma', () => ({
-  prisma: {
-    artistManager: {
-      findMany: vi.fn(),
-    },
-    playlist: {
-      findMany: vi.fn(),
-    },
-  },
-}));
-
-vi.mock('../../config/env_setup/env', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('../../config/env_setup/env')>();
-  return {
-    env: {
-      ...actual.env,
-      FGA_API_URL: 'https://api.us1.fga.dev',
-      FGA_STORE_ID: '01KETXNKXC2EZ6GARNX8VTA5XR',
-      FGA_MODEL_ID: '01KGBSCZAGN1925AP2CJF34E8E',
-      AUTH0_AUDIENCE: 'https://test.audiosass.com',
-      AUTH0_DOMAIN: 'dev-eu86qy2rzdy3nf6d.us.auth0.com',
-      AUTH0_TOKEN_SIGNING_ALGO: 'RS256',
-      AWS_REGION: 'us-east-1',
-      S3_BUCKET_NAME: 'test-bucket',
-      AUTH0_INTERNAL_SYNC_SECRET: 'test-sync-secret',
-    },
-  };
-});
-
-vi.mock('../../middleware/auth/requireAuth.middleware', () => ({
-  requireAuth: (req: any, res: any, next: any) => {
-    if (req.headers['x-test-unauthenticated'] === 'true') {
-      return res.status(401).json({ success: false, error: 'Unauthorized' });
-    }
-    req.user = {
-      id: 'test-user-id',
-      email: 'test@example.com',
-      displayName: 'Test User',
-    };
-    next();
-  },
-}));
 
 describe('UserController Integration Tests', () => {
   beforeEach(() => {
