@@ -54,3 +54,14 @@ export const handleWebhook = async (req: Request, res: Response) => {
 
   return res.status(200).json({ received: true });
 };
+
+export const createSetupCheckoutSession = async (
+  req: Request,
+  res: Response,
+) => {
+  const user = req.user!;
+
+  // This explicitly generates a $0 Checkout Session in setup mode
+  const sessionUrl = await paymentService.createSetupCheckoutSession(user.id);
+  return res.json({ url: sessionUrl });
+};

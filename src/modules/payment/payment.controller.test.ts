@@ -7,6 +7,7 @@ import { stripe } from '../../lib/stripe';
 vi.mock('./payment.service', () => ({
   createCheckoutSession: vi.fn(),
   createPortalSession: vi.fn(),
+  createSetupCheckoutSession: vi.fn(),
   processWebhookEvent: vi.fn(),
 }));
 
@@ -61,6 +62,24 @@ describe('PaymentController Integration Tests', () => {
       expect(response.status).toBe(200);
       expect(response.body).toEqual({ url: 'https://portal.url' });
       expect(paymentService.createPortalSession).toHaveBeenCalledWith(
+        'test-user-id',
+      );
+    });
+  });
+
+  describe('POST /api/v1/payment/setup-checkout', () => {
+    it('should create setup checkout session successfully (200)', async () => {
+      vi.mocked(
+        paymentService.createSetupCheckoutSession,
+      ).mockResolvedValueOnce('https://setup.checkout.url');
+
+      const response = await request(app).post(
+        '/api/v1/payment/setup-checkout',
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ url: 'https://setup.checkout.url' });
+      expect(paymentService.createSetupCheckoutSession).toHaveBeenCalledWith(
         'test-user-id',
       );
     });

@@ -30,4 +30,10 @@ router.post(
   catchAsync(paymentController.createPortalSession),
 );
 
+router.post(
+  '/setup-checkout',
+  catchAsync(paymentRateLimiter),
+  catchAsync(paymentController.createSetupCheckoutSession),
+);
+
 export default router;

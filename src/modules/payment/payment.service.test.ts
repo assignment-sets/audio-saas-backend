@@ -132,6 +132,71 @@ describe('PaymentService Unit Tests', () => {
     });
   });
 
+  describe('createSetupCheckoutSession', () => {
+    it('should throw NotFoundError if user does not exist', async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValueOnce(null);
+
+      await expect(
+        paymentService.createSetupCheckoutSession('user_1'),
+      ).rejects.toThrow(NotFoundError);
+    });
+
+    it('should throw BadRequestError if STRIPE_API_PRICE_ID is not configured', async () => {
+      const mockUser = { id: 'user_1', stripeCustomerId: 'cus_123' } as any;
+      vi.mocked(prisma.user.findUnique).mockResolvedValueOnce(mockUser);
+
+      const originalPriceId = env.STRIPE_API_PRICE_ID;
+      (env as any).STRIPE_API_PRICE_ID = undefined;
+
+      try {
+        await expect(
+          paymentService.createSetupCheckoutSession('user_1'),
+        ).rejects.toThrow(BadRequestError);
+      } finally {
+        (env as any).STRIPE_API_PRICE_ID = originalPriceId;
+      }
+    });
+
+    it('should create customer on stripe if missing and return setup session url', async () => {
+      const mockUser = {
+        id: 'user_1',
+        email: 'test@example.com',
+        displayName: 'Test User',
+        stripeCustomerId: null,
+      } as any;
+
+      const originalPriceId = env.STRIPE_API_PRICE_ID;
+      (env as any).STRIPE_API_PRICE_ID = 'price_api_metered';
+
+      vi.mocked(prisma.user.findUnique).mockResolvedValueOnce(mockUser);
+      vi.mocked(stripe.customers.create).mockResolvedValueOnce({
+        id: 'cus_setup',
+      } as any);
+      vi.mocked(stripe.checkout.sessions.create).mockResolvedValueOnce({
+        url: 'https://setup.checkout.url',
+      } as any);
+
+      try {
+        const url = await paymentService.createSetupCheckoutSession('user_1');
+
+        expect(stripe.customers.create).toHaveBeenCalledWith({
+          email: 'test@example.com',
+          name: 'Test User',
+          metadata: { userId: 'user_1' },
+        });
+        expect(stripe.checkout.sessions.create).toHaveBeenCalledWith({
+          customer: 'cus_setup',
+          mode: 'setup',
+          success_url: expect.any(String),
+          cancel_url: expect.any(String),
+        });
+        expect(url).toBe('https://setup.checkout.url');
+      } finally {
+        (env as any).STRIPE_API_PRICE_ID = originalPriceId;
+      }
+    });
+  });
+
   describe('processWebhookEvent', () => {
     it('should upsert subscription on customer.subscription.created', async () => {
       const mockEvent = {

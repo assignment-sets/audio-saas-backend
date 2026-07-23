@@ -84,6 +84,55 @@ export const createPortalSession = async (userId: string): Promise<string> => {
   return session.url;
 };
 
+export const createSetupCheckoutSession = async (
+  userId: string,
+): Promise<string> => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new NotFoundError('User not found');
+  }
+
+  if (!env.STRIPE_API_PRICE_ID) {
+    throw new BadRequestError(
+      'Stripe API price ID is not properly configured.',
+    );
+  }
+
+  let stripeCustomerId = user.stripeCustomerId;
+
+  // 1. Ensure Stripe Customer exists
+  if (!stripeCustomerId) {
+    const customer = await stripe.customers.create({
+      email: user.email,
+      name: user.displayName,
+      metadata: { userId: user.id },
+    });
+    stripeCustomerId = customer.id;
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { stripeCustomerId },
+    });
+  }
+
+  // 2. Create a Checkout Session in SETUP mode ($0 Vaulting)
+  const session = await stripe.checkout.sessions.create({
+    customer: stripeCustomerId,
+    mode: 'setup',
+    success_url: env.STRIPE_SUCCESS_URL,
+    cancel_url: env.STRIPE_CANCEL_URL,
+  });
+
+  if (!session.url) {
+    throw new Error('Failed to generate Stripe setup session URL');
+  }
+
+  return session.url;
+};
+
 export const processWebhookEvent = async (
   event: Stripe.Event,
 ): Promise<void> => {
@@ -271,6 +320,58 @@ export const processWebhookEvent = async (
         { stripePaymentIntentId, userId: user.id },
         'Logged failed payment record',
       );
+      break;
+    }
+
+    case 'checkout.session.completed': {
+      const session = event.data.object as Stripe.Checkout.Session;
+
+      // Only process if this was a setup session (our pay-as-you-go setup)
+      if (session.mode === 'setup') {
+        const stripeCustomerId = session.customer as string;
+
+        const user = await prisma.user.findUnique({
+          where: { stripeCustomerId },
+        });
+
+        if (!user) {
+          logger.error(
+            { stripeCustomerId },
+            'User not found for setup session completion',
+          );
+          break;
+        }
+
+        if (!env.STRIPE_API_PRICE_ID) {
+          logger.error(
+            'STRIPE_API_PRICE_ID is not configured during setup session completion',
+          );
+          break;
+        }
+
+        // Retrieve the setup intent to extract the vaulted payment method
+        const setupIntentId = session.setup_intent as string;
+        const setupIntent = await stripe.setupIntents.retrieve(setupIntentId);
+        const paymentMethodId = setupIntent.payment_method as string;
+
+        // Set this payment method as the customer's default for future invoices
+        await stripe.customers.update(stripeCustomerId, {
+          invoice_settings: { default_payment_method: paymentMethodId },
+        });
+
+        // Automatically open their metered subscription ledger ($0 upfront)
+        // Creating this subscription emits customer.subscription.created,
+        // which automatically upserts into our Subscription database table.
+        const subscription = await stripe.subscriptions.create({
+          customer: stripeCustomerId,
+          items: [{ price: env.STRIPE_API_PRICE_ID }],
+        });
+
+        logger.info(
+          { userId: user.id, subscriptionId: subscription.id },
+          'Successfully vaulted card and opened metered subscription via Setup Checkout',
+        );
+      }
       break;
     }
 
