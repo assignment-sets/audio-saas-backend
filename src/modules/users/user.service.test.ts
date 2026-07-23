@@ -9,7 +9,9 @@ import {
   ForbiddenError,
   InternalServerError,
   BadRequestError,
+  PaymentRequiredError,
 } from '../../lib/errors';
+import { env } from '../../config/env_setup/env';
 import { JobName } from '../../queues/types';
 
 describe('UserService Unit Tests', () => {
@@ -275,7 +277,42 @@ describe('UserService Unit Tests', () => {
 
   describe('API Key Management', () => {
     describe('createApiKey', () => {
-      it('should generate, hash, and persist API key', async () => {
+      it('should throw NotFoundError if user does not exist', async () => {
+        vi.mocked(prisma.user.findUnique).mockResolvedValueOnce(null);
+
+        await expect(
+          userService.createApiKey('user_1', 'prod_key'),
+        ).rejects.toThrow(NotFoundError);
+      });
+
+      it('should throw PaymentRequiredError if FREE tier user lacks metered subscription', async () => {
+        const mockUser = {
+          id: 'user_1',
+          subscriptions: [],
+        } as any;
+
+        vi.mocked(prisma.user.findUnique).mockResolvedValueOnce(mockUser);
+
+        await expect(
+          userService.createApiKey('user_1', 'prod_key'),
+        ).rejects.toThrow(PaymentRequiredError);
+      });
+
+      it('should generate, hash, and persist API key for FREE user with active metered sub', async () => {
+        const originalPriceId = env.STRIPE_API_PRICE_ID;
+        (env as any).STRIPE_API_PRICE_ID = 'price_api_123';
+
+        const mockUser = {
+          id: 'user_1',
+          subscriptions: [
+            {
+              stripePriceId: 'price_api_123',
+              status: 'active',
+              currentPeriodEnd: new Date(Date.now() + 100000),
+            },
+          ],
+        } as any;
+
         const mockApiKey = {
           id: 'key_1',
           userId: 'user_1',
@@ -283,20 +320,26 @@ describe('UserService Unit Tests', () => {
           keyHash: 'some_hash',
           createdAt: new Date(),
         } as any;
+
+        vi.mocked(prisma.user.findUnique).mockResolvedValueOnce(mockUser);
         vi.mocked(prisma.apiKey.create).mockResolvedValueOnce(mockApiKey);
 
-        const result = await userService.createApiKey('user_1', 'prod_key');
+        try {
+          const result = await userService.createApiKey('user_1', 'prod_key');
 
-        expect(prisma.apiKey.create).toHaveBeenCalledWith({
-          data: expect.objectContaining({
-            userId: 'user_1',
-            name: 'prod_key',
-            keyHash: expect.any(String),
-          }),
-        });
-        expect(result.rawKey).toContain('ak_live_');
-        expect(result.name).toBe('prod_key');
-        expect(result.id).toBe('key_1');
+          expect(prisma.apiKey.create).toHaveBeenCalledWith({
+            data: expect.objectContaining({
+              userId: 'user_1',
+              name: 'prod_key',
+              keyHash: expect.any(String),
+            }),
+          });
+          expect(result.rawKey).toContain('ak_live_');
+          expect(result.name).toBe('prod_key');
+          expect(result.id).toBe('key_1');
+        } finally {
+          (env as any).STRIPE_API_PRICE_ID = originalPriceId;
+        }
       });
     });
 

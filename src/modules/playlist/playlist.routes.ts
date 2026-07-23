@@ -16,6 +16,8 @@ import {
   playlistUserQuerySchema,
 } from './playlist.schema';
 
+import { meteredUsage } from '../../middleware/billing/meteredBilling.middleware';
+
 const router = Router();
 
 // ==========================================
@@ -27,6 +29,7 @@ router.get(
   '/:id',
   validate(playlistIdParamSchema, 'params'),
   catchAsync(optionalAuth),
+  catchAsync(meteredUsage),
   catchAsync(playlistController.getPlaylistById),
 );
 
@@ -35,6 +38,7 @@ router.get(
   '/',
   validate(playlistSearchQuerySchema, 'query'),
   catchAsync(optionalAuth),
+  catchAsync(meteredUsage),
   catchAsync(playlistController.searchPlaylists),
 );
 
@@ -44,6 +48,7 @@ router.get(
   validate(playlistUserParamsSchema, 'params'),
   validate(playlistUserQuerySchema, 'query'),
   catchAsync(optionalAuth),
+  catchAsync(meteredUsage),
   catchAsync(playlistController.getUserPlaylists),
 );
 
@@ -56,6 +61,7 @@ router.use(requireAuth);
 router.post(
   '/',
   validate(createPlaylistSchema, 'body'),
+  catchAsync(meteredUsage),
   catchAsync(playlistController.createPlaylist),
 );
 
@@ -64,6 +70,7 @@ router.patch(
   '/:id',
   validate(playlistIdParamSchema, 'params'),
   validate(updatePlaylistSchema, 'body'),
+  catchAsync(meteredUsage),
   catchAsync(playlistController.updatePlaylist),
 );
 
@@ -79,6 +86,7 @@ router.post(
   '/:id/tracks',
   validate(playlistIdParamSchema, 'params'),
   validate(addTracksSchema, 'body'),
+  catchAsync(meteredUsage),
   catchAsync(playlistController.addTracksToPlaylist),
 );
 
@@ -86,6 +94,7 @@ router.post(
 router.delete(
   '/:id/tracks/:trackId',
   validate(playlistAndTrackParamSchema, 'params'),
+  catchAsync(meteredUsage),
   catchAsync(playlistController.removeTrackFromPlaylist),
 );
 

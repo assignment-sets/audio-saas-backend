@@ -35,7 +35,9 @@ import {
   ForbiddenError,
   InternalServerError,
   BadRequestError,
+  PaymentRequiredError,
 } from '../../lib/errors';
+import { hasActiveMeteredSubscription } from '../../middleware/billing/meteredBilling.middleware';
 import { addUserJob } from '../../lib/queue.client';
 import { JobName } from '../../queues/types';
 
@@ -185,6 +187,26 @@ export const createApiKey = async (
   userId: string,
   name: string,
 ): Promise<{ id: string; name: string; rawKey: string; createdAt: Date }> => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { subscriptions: true },
+  });
+
+  if (!user) {
+    throw new NotFoundError('User not found');
+  }
+
+  const tier = getUserTier(user.subscriptions);
+
+  if (
+    tier === UserTier.FREE &&
+    !hasActiveMeteredSubscription(user.subscriptions)
+  ) {
+    throw new PaymentRequiredError(
+      'A valid payment method is required to generate API keys. Please complete setup checkout to save your card.',
+    );
+  }
+
   const rawKey = 'ak_live_' + crypto.randomBytes(24).toString('hex');
   const keyHash = crypto.createHash('sha256').update(rawKey).digest('hex');
 

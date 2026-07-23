@@ -13,6 +13,7 @@ import {
   appointManagerSchema,
   manageManagerParamSchema,
 } from './artist.schema';
+import { meteredUsage } from '../../middleware/billing/meteredBilling.middleware';
 
 const router = Router();
 
@@ -79,6 +80,7 @@ router.post(
   '/:id/managers',
   validate(artistIdParamSchema, 'params'),
   validate(appointManagerSchema, 'body'),
+  catchAsync(meteredUsage),
   catchAsync(artistController.appointManager),
 );
 
