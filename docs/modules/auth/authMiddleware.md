@@ -8,7 +8,7 @@ This document outlines the unified authentication system supporting both browser
 
 Our routing layer supports two authentication mechanisms interchangeably:
 
-1.  **Auth0 JWT Flow**: Used by the React frontend dashboard via short-lived Auth0 access tokens.
+1.  **Auth0 JWT Flow**: Used by the React frontend dashboard via short-lived Auth0 access tokens (see [Auth0 Tenant Actions & Sync Scripts](../../../auth0/README.md)).
 2.  **Custom API Key Flow**: Used by developer integrations and scripts via long-lived, user-revocable keys (`ak_live_...`).
 
 We use a unified wrapper middleware to dynamically route incoming requests:
