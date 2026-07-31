@@ -10,14 +10,13 @@ An effort to build scalable audio streaming (SaaS like) backend platform built w
 
 ```mermaid
 graph TD
-    Client[Clients / API Key Consumers] -->|HTTP / REST API| API[Audio SaaS Express API Backend]
-
-    API --> Auth[Auth0 & OpenFGA Authorization]
-    API --> DB[(PostgreSQL Database)]
-    API --> Redis[(Redis - Cache, Rate Limit & Queues)]
-    API --> Storage[(AWS S3 Storage)]
-    API --> Transcoder[Audio Transcoding Submodule]
-    API --> Stripe[Stripe Billing & Metering]
+    Client["Clients and API Key Consumers"] -->|"HTTP REST API"| API["Audio SaaS Express API Backend"]
+    API --> Auth["Auth0 and OpenFGA Authorization"]
+    API --> DB[("PostgreSQL Database")]
+    API --> Redis[("Redis - Cache, Rate Limit and Queues")]
+    API --> Storage[("AWS S3 Storage")]
+    API --> Transcoder["Audio Transcoding Submodule"]
+    API --> Stripe["Stripe Billing and Metering"]
 ```
 
 ---
