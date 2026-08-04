@@ -23,32 +23,42 @@ export const hasActiveMeteredSubscription = (
 };
 
 /**
- * Middleware that enforces metered billing checks for FREE tier users on pay-as-you-go routes.
- * - LITE and PRO users bypass metering completely.
+ * Middleware that enforces metered billing checks for FREE tier users on pay-as-you-go API routes.
+ *  * - LITE and PRO users bypass metering completely.
  * - FREE users without a vaulted card receive a 402 Payment Required error.
  * - FREE users with a vaulted card proceed immediately and asynchronously increment Stripe meter events.
  */
-export const meteredUsage = (
+export const meteredUsage = async (
   req: Request,
   res: Response,
   next: NextFunction,
-): void => {
+): Promise<void> => {
   const user = req.user;
 
-  // 1. Unauthenticated or guest — no billing applies
+  // 1. Unauthenticated / guest — no billing applies
   if (!user) {
+    return next();
+  }
+
+  // 2. Web UI Sessions — bypass metering if request comes from official app session
+  const isApiKeyRequest = Boolean(
+    req.headers['x-api-key'] ||
+    req.headers.authorization?.startsWith('Bearer ak_live_'),
+  );
+
+  if (!isApiKeyRequest) {
     return next();
   }
 
   const subscriptions = user.subscriptions || [];
   const tier = user.tier || getUserTier(subscriptions);
 
-  // 2. Paid tiers (LITE / PRO) are on fixed plans — bypass metering
+  // 3. Paid tiers (LITE / PRO) bypass metering
   if (tier === UserTier.LITE || tier === UserTier.PRO) {
     return next();
   }
 
-  // 3. FREE tier — verify active metered subscription (vaulted card)
+  // 4. FREE tier API consumers require an active metered subscription (vaulted card)
   if (!hasActiveMeteredSubscription(subscriptions)) {
     return next(
       new PaymentRequiredError(
@@ -59,9 +69,8 @@ export const meteredUsage = (
 
   const eventName = env.STRIPE_METER_EVENT_NAME || 'audio_saas_api_meter';
 
-  // Hook into Express's finish event, which fires when the response has been completely sent
+  // Hook into Express's finish event to emit meter event asynchronously
   res.on('finish', () => {
-    // Avoid charging if server response isnt success
     if (res.statusCode >= 200 && res.statusCode < 300) {
       stripe.billing.meterEvents
         .create({
