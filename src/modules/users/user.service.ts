@@ -2,6 +2,23 @@ import type { User, Subscription } from '@prisma/client';
 import crypto from 'crypto';
 import { prisma } from '../../lib/prisma';
 import { env } from '../../config/env_setup/env';
+import type {
+  SyncUserInput,
+  UpdateUserInput,
+  GetUserInput,
+} from './user.schema';
+import { logger } from '../../config/logging_setup/logger';
+import { management } from '../../lib/auth0.client';
+import {
+  NotFoundError,
+  ForbiddenError,
+  InternalServerError,
+  BadRequestError,
+  PaymentRequiredError,
+} from '../../lib/errors';
+import { hasActiveMeteredSubscription } from '../../middleware/billing/meteredBilling.middleware';
+import { addUserJob } from '../../lib/queue.client';
+import { JobName } from '../../queues/types';
 
 export enum UserTier {
   FREE = 'FREE',
@@ -23,23 +40,6 @@ export const getUserTier = (subscriptions: Subscription[]): UserTier => {
 
   return UserTier.FREE;
 };
-import type {
-  SyncUserInput,
-  UpdateUserInput,
-  GetUserInput,
-} from './user.schema';
-import { logger } from '../../config/logging_setup/logger';
-import { management } from '../../lib/auth0.client';
-import {
-  NotFoundError,
-  ForbiddenError,
-  InternalServerError,
-  BadRequestError,
-  PaymentRequiredError,
-} from '../../lib/errors';
-import { hasActiveMeteredSubscription } from '../../middleware/billing/meteredBilling.middleware';
-import { addUserJob } from '../../lib/queue.client';
-import { JobName } from '../../queues/types';
 
 export const syncUser = async (data: SyncUserInput): Promise<User> => {
   try {
