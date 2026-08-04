@@ -187,6 +187,7 @@ describe('PaymentService Unit Tests', () => {
         expect(stripe.checkout.sessions.create).toHaveBeenCalledWith({
           customer: 'cus_setup',
           mode: 'setup',
+          currency: 'usd', // <-- ADDED HERE TO MATCH IMPLEMENTATION
           success_url: expect.any(String),
           cancel_url: expect.any(String),
         });

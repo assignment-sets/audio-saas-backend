@@ -122,6 +122,7 @@ export const createSetupCheckoutSession = async (
   const session = await stripe.checkout.sessions.create({
     customer: stripeCustomerId,
     mode: 'setup',
+    currency: 'usd',
     success_url: env.STRIPE_SUCCESS_URL,
     cancel_url: env.STRIPE_CANCEL_URL,
   });
