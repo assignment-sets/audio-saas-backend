@@ -1,4 +1,7 @@
-FROM node:20-alpine AS builder
+# ==========================================
+# STAGE 1: Build & Compile
+# ==========================================
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -10,7 +13,10 @@ COPY . .
 
 RUN npm run build
 
-FROM node:20-alpine
+# ==========================================
+# STAGE 2: Production Execution
+# ==========================================
+FROM node:22-alpine
 
 WORKDIR /app
 
