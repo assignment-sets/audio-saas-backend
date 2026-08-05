@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import '../lib/datadog.tracer.js';
 import { processTrackPlays } from './jobs/trackPlays.js';
 
 const INTERVAL_MS = parseInt(process.env.INTERVAL_MS || '30000', 10);
