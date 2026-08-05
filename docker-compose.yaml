@@ -17,6 +17,12 @@ services:
     restart: 'no'
     ports:
       - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 3s
+      timeout: 3s
+      retries: 5
+      start_period: 2s
 
   engagement-redis:
     image: redis:7-alpine
@@ -44,9 +50,45 @@ services:
     image: audiosass-engagement-bg-svc
     build: ./packages/engagement-bg-svc
     restart: 'no'
-    network_mode: host
+    network_mode: host # due to main backend not being dockerized yet
     env_file:
       - ./packages/engagement-bg-svc/.env
+    environment:
+      # Datadog APM configuration
+      - DD_TRACE_ENABLED=true
+      - DD_SERVICE=engagement-bg-svc
+      - DD_ENV=${DD_ENV:-development}
+      - DD_VERSION=${DD_VERSION:-1.0.0}
+      - DD_AGENT_HOST=localhost # Localhost due to network_mode: host
+      - DD_TRACE_AGENT_PORT=8126
+
+  audio-transcoding-svc:
+    container_name: audio-transcoding-svc
+    image: audiosass-transcoding-svc
+    depends_on:
+      redis:
+        condition: service_healthy
+    build:
+      context: ./audio-processing-container
+      dockerfile: Dockerfile
+    restart: 'no'
+    network_mode: 'host' # due to main backend not being dockerized yet
+    env_file:
+      - ./audio-processing-container/.env
+    environment:
+      - AWS_PROFILE=default
+      - AWS_SDK_LOAD_CONFIG=1
+      # Datadog APM configuration
+      - DD_TRACE_ENABLED=true
+      - DD_SERVICE=audio-transcoding-svc
+      - DD_ENV=${DD_ENV:-development}
+      - DD_VERSION=${DD_VERSION:-1.0.0}
+      - DD_AGENT_HOST=localhost # Localhost due to network_mode: host
+      - DD_TRACE_AGENT_PORT=8126
+    volumes:
+      - ${HOME}/.aws:/home/node/.aws:ro
+    tmpfs:
+      - /tmp
 
   datadog-agent:
     image: registry.datadoghq.com/agent:7
