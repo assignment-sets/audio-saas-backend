@@ -55,6 +55,16 @@ export const envSchema = z.object({
   STRIPE_PORTAL_CONFIG_ID: z.string().optional(),
   STRIPE_SUCCESS_URL: z.string().url().default('http://localhost:5173/'),
   STRIPE_CANCEL_URL: z.string().url().default('http://localhost:5173/'),
+
+  DD_TRACE_ENABLED: z
+    .string()
+    .transform((val) => val === 'true')
+    .default(false),
+  DD_SERVICE: z.string().default('audio-sass-backend'),
+  DD_ENV: z.string().default('development'),
+  DD_VERSION: z.string().default('1.0.0'),
+  DD_AGENT_HOST: z.string().default('127.0.0.1'),
+  DD_TRACE_AGENT_PORT: z.string().default('8126'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

@@ -1,3 +1,5 @@
+import './lib/datadog.tracer';
+
 import app from './app';
 import { env } from './config/env_setup/env';
 import { logger } from './config/logging_setup/logger';
